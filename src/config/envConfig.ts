@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { z } from "zod";
 
-dotenv.config({ path: path.resolve(__dirname, "../.env"), override: true });
+dotenv.config({ path: path.resolve(import.meta.dirname!, "../.env"), override: true });
 
 const envVarsSchema = z.object({
   RPC_URL: z.string(),
@@ -11,9 +11,9 @@ const envVarsSchema = z.object({
 
 const envVars = envVarsSchema.parse(process.env);
 
-const config = {
+const envConfig = {
   rpcUrl: envVars.RPC_URL,
   wsUrl: envVars.WS_URL,
 };
 
-export default config;
+export default envConfig;
