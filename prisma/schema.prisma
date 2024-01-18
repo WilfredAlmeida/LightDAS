@@ -1,0 +1,244 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "views"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  extensions = [pgcrypto]
+}
+
+model asset {
+  id                                      Bytes                          @id
+  alt_id                                  Bytes?
+  specification_version                   specification_versions
+  specification_asset_class               specification_asset_class
+  owner                                   Bytes?
+  owner_type                              owner_type                     @default(single)
+  delegate                                Bytes?
+  frozen                                  Boolean                        @default(false)
+  supply                                  BigInt                         @default(1)
+  supply_mint                             Bytes?
+  compressed                              Boolean                        @default(false)
+  compressible                            Boolean                        @default(false)
+  seq                                     BigInt
+  tree_id                                 Bytes?
+  leaf                                    Bytes?
+  nonce                                   BigInt
+  royalty_target_type                     royalty_target_type            @default(creators)
+  royalty_target                          Bytes?
+  royalty_amount                          Int                            @default(0)
+  asset_data                              Bytes?
+  created_at                              DateTime?                      @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  burnt                                   Boolean                        @default(false)
+  slot_updated                            BigInt
+  asset_data_asset_asset_dataToasset_data asset_data?                    @relation("asset_asset_dataToasset_data", fields: [asset_data], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  asset_authority                         asset_authority?
+  asset_creators                          asset_creators?
+  asset_grouping                          asset_grouping?
+  asset_v1_account_attachments            asset_v1_account_attachments[]
+
+  @@index([delegate], map: "asset_delegate")
+  @@index([leaf], map: "asset_leaf")
+  @@index([owner], map: "asset_owner")
+  @@index([tree_id, leaf, nonce], map: "asset_revision")
+  @@index([tree_id], map: "asset_tree")
+  @@index([tree_id, leaf], map: "asset_tree_leaf")
+}
+
+model asset_authority {
+  id           BigInt   @id @default(autoincrement())
+  asset_id     Bytes    @unique(map: "asset_authority_asset_id")
+  scopes       String[]
+  authority    Bytes
+  seq          BigInt
+  slot_updated BigInt
+  asset        asset    @relation(fields: [asset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([asset_id, authority], map: "asset_authority_idx")
+}
+
+model asset_creators {
+  id           BigInt  @id @default(autoincrement())
+  asset_id     Bytes   @unique(map: "asset_creators_asset_id")
+  creator      Bytes
+  share        Int     @default(0)
+  verified     Boolean @default(false)
+  seq          BigInt
+  slot_updated BigInt
+  asset        asset   @relation(fields: [asset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([asset_id, creator], map: "asset_creator")
+  @@index([asset_id, verified], map: "asset_verified_creator")
+}
+
+model asset_data {
+  id                                 Bytes            @id
+  chain_data_mutability              chain_mutability @default(mutable)
+  chain_data                         Json
+  metadata_url                       String           @db.VarChar(200)
+  metadata_mutability                mutability       @default(mutable)
+  metadata                           Json
+  slot_updated                       BigInt
+  asset_asset_asset_dataToasset_data asset[]          @relation("asset_asset_dataToasset_data")
+
+  @@index([slot_updated], map: "slot_updated_idx")
+}
+
+model asset_grouping {
+  id           BigInt @id @default(autoincrement())
+  asset_id     Bytes  @unique(map: "asset_grouping_asset_id")
+  group_key    String
+  group_value  String
+  seq          BigInt
+  slot_updated BigInt
+  asset        asset  @relation(fields: [asset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([group_key, group_value], map: "asset_grouping_key")
+  @@index([group_key, asset_id], map: "asset_grouping_value")
+}
+
+model asset_v1_account_attachments {
+  id              Bytes                  @id
+  asset_id        Bytes?
+  attachment_type v1_account_attachments
+  initialized     Boolean                @default(false)
+  data            Json?
+  slot_updated    BigInt
+  asset           asset?                 @relation(fields: [asset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model backfill_items {
+  id         BigInt  @id @default(autoincrement())
+  tree       Bytes
+  seq        BigInt
+  slot       BigInt
+  force_chk  Boolean
+  backfilled Boolean
+
+  @@index([backfilled])
+  @@index([force_chk])
+  @@index([seq])
+  @@index([slot])
+  @@index([tree, backfilled])
+  @@index([tree, force_chk])
+  @@index([tree])
+  @@index([tree, seq])
+  @@index([tree, slot])
+}
+
+model cl_items {
+  id       BigInt  @id @default(autoincrement())
+  tree     Bytes
+  node_idx BigInt
+  leaf_idx BigInt?
+  seq      BigInt
+  level    BigInt
+  hash     Bytes
+
+  @@unique([tree, node_idx], map: "cl_items__tree_node")
+  @@index([hash])
+  @@index([leaf_idx], map: "cl_items_leaf_idx")
+  @@index([level], map: "cl_items_level")
+  @@index([node_idx], map: "cl_items_node_idx")
+  @@index([tree])
+}
+
+model raw_txn {
+  signature String  @id @db.VarChar(64)
+  slot      BigInt
+  processed Boolean
+
+  @@index([slot], map: "raw_slot")
+}
+
+model token_accounts {
+  pubkey           Bytes   @id
+  mint             Bytes
+  amount           BigInt  @default(0)
+  owner            Bytes
+  frozen           Boolean @default(false)
+  close_authority  Bytes?
+  delegate         Bytes?
+  delegated_amount BigInt  @default(0)
+  slot_updated     BigInt
+  token_program    Bytes
+
+  @@index([amount], map: "ta_amount")
+  @@index([delegated_amount], map: "ta_amount_del")
+  @@index([delegate], map: "ta_delegate")
+  @@index([mint], map: "ta_mint")
+  @@index([slot_updated], map: "ta_slot_updated_idx")
+}
+
+model tokens {
+  mint             Bytes  @id
+  supply           BigInt @default(0)
+  decimals         Int    @default(0)
+  token_program    Bytes
+  mint_authority   Bytes?
+  freeze_authority Bytes?
+  close_authority  Bytes?
+  extension_data   Bytes?
+  slot_updated     BigInt
+
+  @@index([close_authority], map: "t_close_auth")
+  @@index([decimals], map: "t_decimals")
+  @@index([freeze_authority], map: "t_freeze_auth")
+  @@index([mint_authority], map: "t_mint_auth")
+  @@index([slot_updated], map: "t_slot_updated_idx")
+  @@index([supply], map: "t_supply")
+}
+
+enum chain_mutability {
+  unknown
+  mutable
+  immutable
+}
+
+enum mutability {
+  unknown
+  mutable
+  immutable
+}
+
+enum owner_type {
+  unknown
+  token
+  single
+}
+
+enum royalty_target_type {
+  unknown
+  creators
+  fanout
+  single
+}
+
+enum specification_asset_class {
+  unknown
+  FUNGIBLE_TOKEN
+  FUNGIBLE_ASSET
+  NFT
+  PRINTABLE_NFT
+  PRINT
+  TRANSFER_RESTRICTED_NFT
+  NON_TRANSFERABLE_NFT
+  IDENTITY_NFT
+}
+
+enum specification_versions {
+  unknown
+  v0
+  v1
+  v2
+}
+
+enum v1_account_attachments {
+  unknown
+  edition
+  master_edition_v2
+  master_edition_v1
+  edition_marker
+}
