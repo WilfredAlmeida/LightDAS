@@ -1,104 +1,38 @@
 import { base58 } from "@metaplex-foundation/umi/serializers";
 import type { VersionedTransactionResponse } from "@solana/web3.js";
 
-import {
-  handleBubblegumBurnInstruction,
-  handleBubblegumTransferInstruction,
-  isBubblegumBurnInstruction,
-  isBubblegumTransferInstruction,
-} from "./bubblegum";
+import { handleBubblegumInstruction, BUBBLEGUM_PROGRAM_ID } from "./bubblegum";
 import {
   type GetSignaturesForAddressInput,
   getSignaturesForAddress,
   getTransaction,
 } from "../rpc/rpc";
 
-export const getAccountKeys = (transaction: VersionedTransactionResponse) => {
-  return transaction.transaction.message.getAccountKeys({
+export const processTransaction = async (
+  transaction: VersionedTransactionResponse,
+) => {
+  const accountKeys = transaction.transaction.message.getAccountKeys({
     accountKeysFromLookups: transaction.meta?.loadedAddresses,
   });
-};
 
-export const processCpis = (transaction: VersionedTransactionResponse) => {
-  const accountKeys = getAccountKeys(transaction);
+  let instructions = [
+    ...transaction.transaction.message.compiledInstructions,
+    ...(transaction.meta?.innerInstructions ?? [])
+      .flatMap(({ instructions }) => instructions)
+      .map(({ programIdIndex, data, accounts }) => ({
+        programIdIndex,
+        data: base58.serialize(data),
+        accountKeyIndexes: accounts,
+      })),
+  ];
 
-  for (const cpi of transaction.meta?.innerInstructions || []) {
-    for (const cpiInstruction of cpi.instructions) {
-      const instructionData = base58.serialize(cpiInstruction.data);
-
-      if (
-        isBubblegumTransferInstruction(
-          cpiInstruction.programIdIndex,
-          instructionData,
-          accountKeys
-        )
-      ) {
-        handleBubblegumTransferInstruction(
-          instructionData,
-          cpiInstruction.accounts,
-          accountKeys
-        );
-      }
-
-      if (
-        isBubblegumBurnInstruction(
-          cpiInstruction.programIdIndex,
-          instructionData,
-          accountKeys
-        )
-      ) {
-        handleBubblegumBurnInstruction(
-          instructionData,
-          cpiInstruction.accounts,
-          accountKeys
-        );
-      }
+  for (const { programIdIndex, data, accountKeyIndexes } of instructions) {
+    switch (accountKeys.get(programIdIndex)?.toBase58()) {
+      case BUBBLEGUM_PROGRAM_ID.toBase58():
+        handleBubblegumInstruction(data, accountKeyIndexes, accountKeys);
+        break;
     }
   }
-};
-
-export const processInstructions = (
-  transaction: VersionedTransactionResponse
-) => {
-  const accountKeys = getAccountKeys(transaction);
-
-  for (const instruction of transaction.transaction.message
-    .compiledInstructions) {
-    if (
-      isBubblegumTransferInstruction(
-        instruction.programIdIndex,
-        instruction.data,
-        accountKeys
-      )
-    ) {
-      handleBubblegumTransferInstruction(
-        instruction.data,
-        instruction.accountKeyIndexes,
-        accountKeys
-      );
-    }
-
-    if (
-      isBubblegumBurnInstruction(
-        instruction.programIdIndex,
-        instruction.data,
-        accountKeys
-      )
-    ) {
-      handleBubblegumBurnInstruction(
-        instruction.data,
-        instruction.accountKeyIndexes,
-        accountKeys
-      );
-    }
-  }
-};
-
-export const processTransaction = async (
-  transaction: VersionedTransactionResponse
-) => {
-  processCpis(transaction);
-  processInstructions(transaction);
 };
 
 export const processMerkleTreeTransactions = async ({
@@ -113,7 +47,7 @@ export const processMerkleTreeTransactions = async ({
   console.log(
     `Found ${
       signatures.length
-    } new transactions on Merkle Tree ${address.toBase58()}...`
+    } new transactions on Merkle Tree ${address.toBase58()}...`,
   );
 
   for (let i = 0; i < signatures.length; i++) {
@@ -134,7 +68,7 @@ export const processMerkleTreeTransactions = async ({
 };
 
 export const processWebsocketMerkleTreeTransaction = async (
-  txSignature: string
+  txSignature: string,
 ) => {
   console.log("Fetching Transaction: ", txSignature);
 
