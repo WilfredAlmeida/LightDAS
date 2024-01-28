@@ -23,6 +23,9 @@ const main = async () => {
     { address: "C7Hp7t9ojf4r9hFcY1zT1VXg7GjgER6oUdHUCF9SyjZ1" },
     { address: "3gz5ZD8ZsZtAHMhxAYoTXfW5yReio53ALCwpT2CC4tYv" },
     { address: "5XcnDce9Do8HKNAuWCPKJpGnhazhs3anbK6PQwt1fDLg" },
+    { address: "Cu61XHSkbasbvBc3atv5NUMz6C8FYmocNkH7mtjLFjR7" },
+    { address: "C8vRoSDJRUG2mjhKYA5iHZk1odL5vRc89nZu7LXKx3yr" },
+    { address: "GHh4bn52FvfS2eHQ4LaQyeTAETDvd4Y2RvgjQwD6ZHVj" },
 
     // devnet
     // { address: "r6frHpei4tXkNytXEjbBgtzZVEPtGKg338Q3rrHFEnk" },

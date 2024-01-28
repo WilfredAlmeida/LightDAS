@@ -28,7 +28,7 @@ export const processTransaction = async (
 
   for (const { programIdIndex, data, accountKeyIndexes } of instructions) {
     switch (accountKeys.get(programIdIndex)?.toBase58()) {
-      case BUBBLEGUM_PROGRAM_ID.toBase58():
+      case BUBBLEGUM_PROGRAM_ID.toBase58():        
         handleBubblegumInstruction(data, accountKeyIndexes, accountKeys);
         break;
     }

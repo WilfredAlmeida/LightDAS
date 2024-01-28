@@ -1,6 +1,7 @@
 import {
   findLeafAssetIdPda,
   getBurnInstructionDataSerializer,
+  getMintToCollectionV1InstructionDataSerializer,
   getTransferInstructionDataSerializer,
 } from "@metaplex-foundation/mpl-bubblegum";
 import { publicKey } from "@metaplex-foundation/umi";
@@ -41,7 +42,8 @@ export const DISCRIMINATOR_LOOKUP = Object.fromEntries(
 );
 
 export function getBubblegumInstructionType(data: Uint8Array): string {
-  let hex = Buffer.from(data.slice(0, 6)).toString("hex");
+  let hex = Buffer.from(data.slice(0, 8)).toString("hex");
+
   return DISCRIMINATOR_LOOKUP[hex] ?? `unknown discriminator ${hex}`;
 }
 
@@ -57,7 +59,8 @@ export function parseInstruction(
       return getTransferInstructionDataSerializer().deserialize(
         instructionData,
       )[0];
-
+    case "mintToCollectionV1":
+      return getMintToCollectionV1InstructionDataSerializer().deserialize(instructionData)[0];
     default:
       return null;
   }
