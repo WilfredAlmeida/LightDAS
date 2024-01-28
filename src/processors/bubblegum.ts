@@ -32,38 +32,300 @@ export const DISCRIMINATORS = {
   verifyCollection: [56, 113, 101, 253, 79, 55, 122, 169],
   verifyCreator: [52, 17, 96, 132, 71, 4, 85, 194],
   verifyLeaf: [124, 220, 22, 223, 104, 10, 250, 224],
-};
+} as const;
 
 export const DISCRIMINATOR_LOOKUP = Object.fromEntries(
   Object.entries(DISCRIMINATORS).map(([k, v]) => [
     Buffer.from(v).toString("hex"),
-    k,
+    k as keyof typeof INSTRUCTION_ACCOUNT_MAP,
   ]),
 );
 
-export function getBubblegumInstructionType(data: Uint8Array): string {
-  let hex = Buffer.from(data.slice(0, 8)).toString("hex");
+export const INSTRUCTION_ACCOUNT_MAP = {
+  burn: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "merkleTree",
+    "logWrapper",
+    "compressionProgram",
+    "systemProgram",
+  ],
+  cancelRedeem: [
+    "treeAuthority",
+    "leafOwner",
+    "merkleTree",
+    "voucher",
+    "logWrapper",
+    "compressionProgram",
+    "systemProgram",
+  ],
+  compress: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "merkleTree",
+    "tokenAccount",
+    "mint",
+    "metadata",
+    "masterEdition",
+    "payer",
+    "logWrapper",
+    "compressionProgram",
+    "tokenProgram",
+    "tokenMetadataProgram",
+    "systemProgram",
+  ],
+  createTree: [
+    "treeAuthority",
+    "merkleTree",
+    "payer",
+    "treeCreator",
+    "logWrapper",
+    "compressionProgram",
+    "systemProgram",
+  ],
+  decompressV1: [
+    "voucher",
+    "leafOwner",
+    "tokenAccount",
+    "mint",
+    "mintAuthority",
+    "metadata",
+    "masterEdition",
+    "systemProgram",
+    "sysvarRent",
+    "tokenMetadataProgram",
+    "tokenProgram",
+    "associatedTokenProgram",
+    "logWrapper",
+  ],
+  delegate: [
+    "treeAuthority",
+    "leafOwner",
+    "previousLeafDelegate",
+    "newLeafDelegate",
+    "merkleTree",
+    "logWrapper",
+    "compressionProgram",
+    "systemProgram",
+  ],
+  mintToCollectionV1: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "merkleTree",
+    "payer",
+    "treeDelegate",
+    "collectionAuthority",
+    "collectionAuthorityRecordPda",
+    "collectionMint",
+    "collectionMetadata",
+    "editionAccount",
+    "bubblegumSigner",
+    "logWrapper",
+    "compressionProgram",
+    "tokenMetadataProgram",
+    "systemProgram",
+  ],
+  mintV1: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "merkleTree",
+    "payer",
+    "treeDelegate",
+    "logWrapper",
+    "compressionProgram",
+    "systemProgram",
+  ],
+  redeem: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "merkleTree",
+    "voucher",
+    "logWrapper",
+    "compressionProgram",
+    "systemProgram",
+  ],
+  setAndVerifyCollection: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "merkleTree",
+    "payer",
+    "treeDelegate",
+    "collectionAuthority",
+    "collectionAuthorityRecordPda",
+    "collectionMint",
+    "collectionMetadata",
+    "editionAccount",
+    "bubblegumSigner",
+    "logWrapper",
+    "compressionProgram",
+    "tokenMetadataProgram",
+    "systemProgram",
+  ],
+  setDecompressableState: ["treeAuthority", "treeCreator"],
+  setDecompressibleState: ["treeAuthority", "treeCreator"],
+  setTreeDelegate: [
+    "treeAuthority",
+    "treeCreator",
+    "newTreeDelegate",
+    "merkleTree",
+    "systemProgram",
+  ],
+  transfer: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "newLeafOwner",
+    "merkleTree",
+    "logWrapper",
+    "compressionProgram",
+    "systemProgram",
+  ],
+  unverifyCollection: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "merkleTree",
+    "payer",
+    "treeDelegate",
+    "collectionAuthority",
+    "collectionAuthorityRecordPda",
+    "collectionMint",
+    "collectionMetadata",
+    "editionAccount",
+    "bubblegumSigner",
+    "logWrapper",
+    "compressionProgram",
+    "tokenMetadataProgram",
+    "systemProgram",
+  ],
+  unverifyCreator: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "merkleTree",
+    "payer",
+    "creator",
+    "logWrapper",
+    "compressionProgram",
+    "systemProgram",
+  ],
+  verifyCollection: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "merkleTree",
+    "payer",
+    "treeDelegate",
+    "collectionAuthority",
+    "collectionAuthorityRecordPda",
+    "collectionMint",
+    "collectionMetadata",
+    "editionAccount",
+    "bubblegumSigner",
+    "logWrapper",
+    "compressionProgram",
+    "tokenMetadataProgram",
+    "systemProgram",
+  ],
+  verifyCreator: [
+    "treeAuthority",
+    "leafOwner",
+    "leafDelegate",
+    "merkleTree",
+    "payer",
+    "creator",
+    "logWrapper",
+    "compressionProgram",
+    "systemProgram",
+  ],
+  updateMetadata: [
+    "treeAuthority",
+    "authority",
+    "collectionMint",
+    "collectionMetadata",
+    "collectionAuthorityRecordPda",
+    "leafOwner",
+    "leafDelegate",
+    "payer",
+    "merkleTree",
+    "logWrapper",
+    "compressionProgram",
+    "tokenMetadataProgram",
+    "systemProgram",
+  ],
+} as const;
 
-  return DISCRIMINATOR_LOOKUP[hex] ?? `unknown discriminator ${hex}`;
+export function getBubblegumInstructionType(
+  data: Uint8Array,
+): keyof typeof INSTRUCTION_ACCOUNT_MAP {
+  let hex = Buffer.from(data.slice(0, 8)).toString("hex");
+  let instructionType = DISCRIMINATOR_LOOKUP[hex];
+  if (!instructionType) throw new Error(`unknown discriminator ${hex}`);
+  return instructionType;
 }
 
 export function parseInstruction(
   instructionData: Uint8Array,
-  instructionType?: string,
+  accountKeyIndexes: number[],
+  accountKeys: MessageAccountKeys,
 ) {
-  instructionType ??= getBubblegumInstructionType(instructionData);
+  let instructionType = getBubblegumInstructionType(instructionData);
+  let accounts = parseInstructionAccounts(
+    INSTRUCTION_ACCOUNT_MAP[instructionType],
+    accountKeyIndexes,
+    accountKeys,
+  );
   switch (instructionType) {
     case "burn":
-      return getBurnInstructionDataSerializer().deserialize(instructionData)[0];
+      return {
+        instructionType,
+        accounts,
+        data: getBurnInstructionDataSerializer().deserialize(
+          instructionData,
+        )[0],
+      };
     case "transfer":
-      return getTransferInstructionDataSerializer().deserialize(
-        instructionData,
-      )[0];
+      return {
+        instructionType,
+        accounts,
+        data: getTransferInstructionDataSerializer().deserialize(
+          instructionData,
+        )[0],
+      };
     case "mintToCollectionV1":
-      return getMintToCollectionV1InstructionDataSerializer().deserialize(instructionData)[0];
+      return {
+        instructionType,
+        accounts,
+        data: getMintToCollectionV1InstructionDataSerializer().deserialize(
+          instructionData,
+        )[0],
+      };
+
     default:
       return null;
   }
+}
+
+export function parseInstructionAccounts(
+  accountNames: (typeof INSTRUCTION_ACCOUNT_MAP)[keyof typeof INSTRUCTION_ACCOUNT_MAP],
+  accountKeyIndexes: number[],
+  accountKeys: MessageAccountKeys,
+) {
+  let accounts = { remainingAccounts: [] };
+  for (let i = 0; i < accountKeyIndexes.length; i++) {
+    let key = accountKeys.get(accountKeyIndexes[i]);
+    if (i < accountNames.length) accounts[accountNames[i]] = key;
+    else accounts.remainingAccounts.push(key);
+  }
+  return accounts as { [key in (typeof accountNames)[number]]: PublicKey } & {
+    remainingAccounts: PublicKey[];
+  };
 }
 
 export function handleBubblegumInstruction(
@@ -71,21 +333,16 @@ export function handleBubblegumInstruction(
   accountKeyIndexes: number[],
   accountKeys: MessageAccountKeys,
 ) {
-  let instructionType = getBubblegumInstructionType(instructionData);
-  let parsedInstruction = parseInstruction(instructionData, instructionType);
-  if (!parsedInstruction) return;
+  let ix = parseInstruction(instructionData, accountKeyIndexes, accountKeys);
+  if (!ix) return;
 
   let merkleTreeAddress;
   let assetId;
-  switch (instructionType) {
+  switch (ix.instructionType) {
     case "burn":
-      merkleTreeAddress = accountKeys.get(accountKeyIndexes[3]);
-
-      if (!merkleTreeAddress) throw new Error("Merkle Tree Address not found");
-
       assetId = findLeafAssetIdPda(context, {
-        merkleTree: publicKey(merkleTreeAddress),
-        leafIndex: parsedInstruction.index,
+        merkleTree: publicKey(ix.accounts.merkleTree),
+        leafIndex: ix.data.index,
       })[0];
 
       console.log(`Burned ${assetId}`);
@@ -93,24 +350,17 @@ export function handleBubblegumInstruction(
       break;
 
     case "transfer":
-      merkleTreeAddress = accountKeys.get(accountKeyIndexes[4]);
-
-      if (!merkleTreeAddress) throw new Error("Merkle Tree Address not found");
-
       assetId = findLeafAssetIdPda(context, {
-        merkleTree: publicKey(merkleTreeAddress),
-        leafIndex: parsedInstruction.index,
+        merkleTree: publicKey(ix.accounts.merkleTree),
+        leafIndex: ix.data.index,
       })[0];
 
-      const leafOwnerAddress = accountKeys.get(accountKeyIndexes[2]);
-      const newLeafOwnerAddress = accountKeys.get(accountKeyIndexes[3]);
-
-      if (!newLeafOwnerAddress)
-        throw new Error("New Leaf Owner Address not found");
-
       console.log(
-        `Transferred ${assetId} from ${leafOwnerAddress?.toBase58()} to ${newLeafOwnerAddress.toBase58()}`,
+        `Transferred ${assetId} from ${ix.accounts.leafOwner} to ${ix.accounts.newLeafOwner}`,
       );
+      break;
+
+    case "mintToCollectionV1":
       break;
   }
 }
