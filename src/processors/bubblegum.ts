@@ -3,15 +3,29 @@ import {
   getBurnInstructionDataSerializer,
   getMintToCollectionV1InstructionDataSerializer,
   getTransferInstructionDataSerializer,
+  BubblegumEventType,
+  LeafSchema,
+  BurnInstructionData,
+  MintToCollectionV1InstructionData,
+  TransferInstructionData
 } from "@metaplex-foundation/mpl-bubblegum";
 import { publicKey } from "@metaplex-foundation/umi";
-import { MessageAccountKeys, PublicKey } from "@solana/web3.js";
+import { MessageAccountKeys, PublicKey, VersionedTransactionResponse } from "@solana/web3.js";
 
 import { context } from "../rpc/rpc";
+import { handleMintToCollectionV1Instruction } from "./instructions/mintToCollectionV1";
 
 export const BUBBLEGUM_PROGRAM_ID = new PublicKey(
   "BGUMAp9Gq7iTEuizy4pqaxsTyUCBK68MDfK752saRPUY",
 );
+
+export interface ParsedInstructionResult {
+  instructionType: keyof typeof INSTRUCTION_ACCOUNT_MAP;
+  accounts: { [key in (typeof INSTRUCTION_ACCOUNT_MAP)[keyof typeof INSTRUCTION_ACCOUNT_MAP][number]]: PublicKey } & {
+    remainingAccounts: PublicKey[];
+  };
+  data: BurnInstructionData | TransferInstructionData | MintToCollectionV1InstructionData;
+}
 
 export const DISCRIMINATORS = {
   burn: [116, 110, 29, 56, 107, 219, 42, 93],
@@ -274,7 +288,7 @@ export function parseInstruction(
   instructionData: Uint8Array,
   accountKeyIndexes: number[],
   accountKeys: MessageAccountKeys,
-) {
+): ParsedInstructionResult | null {
   let instructionType = getBubblegumInstructionType(instructionData);
   let accounts = parseInstructionAccounts(
     INSTRUCTION_ACCOUNT_MAP[instructionType],
@@ -283,6 +297,8 @@ export function parseInstruction(
   );
   switch (instructionType) {
     case "burn":
+      console.log("BURN");
+      
       return {
         instructionType,
         accounts,
@@ -291,6 +307,7 @@ export function parseInstruction(
         )[0],
       };
     case "transfer":
+      console.log("TRANSFER");
       return {
         instructionType,
         accounts,
@@ -299,6 +316,7 @@ export function parseInstruction(
         )[0],
       };
     case "mintToCollectionV1":
+      console.log("MINT");
       return {
         instructionType,
         accounts,
@@ -308,6 +326,8 @@ export function parseInstruction(
       };
 
     default:
+      console.log("UNKNOWN");
+      console.log(instructionType);
       return null;
   }
 }
@@ -328,11 +348,13 @@ export function parseInstructionAccounts(
   };
 }
 
-export function handleBubblegumInstruction(
+export async function handleBubblegumInstruction(
   instructionData: Uint8Array,
   accountKeyIndexes: number[],
   accountKeys: MessageAccountKeys,
-) {
+  transaction: VersionedTransactionResponse,
+  leafSchema: LeafSchema,
+) {  
   let ix = parseInstruction(instructionData, accountKeyIndexes, accountKeys);
   if (!ix) return;
 
@@ -342,7 +364,7 @@ export function handleBubblegumInstruction(
     case "burn":
       assetId = findLeafAssetIdPda(context, {
         merkleTree: publicKey(ix.accounts.merkleTree),
-        leafIndex: ix.data.index,
+        leafIndex: (ix.data as BurnInstructionData).index,
       })[0];
 
       console.log(`Burned ${assetId}`);
@@ -352,7 +374,7 @@ export function handleBubblegumInstruction(
     case "transfer":
       assetId = findLeafAssetIdPda(context, {
         merkleTree: publicKey(ix.accounts.merkleTree),
-        leafIndex: ix.data.index,
+        leafIndex: (ix.data as TransferInstructionData).index,
       })[0];
 
       console.log(
@@ -361,6 +383,7 @@ export function handleBubblegumInstruction(
       break;
 
     case "mintToCollectionV1":
+      await handleMintToCollectionV1Instruction(transaction, leafSchema, ix)
       break;
   }
 }

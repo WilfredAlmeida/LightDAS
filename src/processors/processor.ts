@@ -1,6 +1,16 @@
 import { base58 } from "@metaplex-foundation/umi/serializers";
 import type { VersionedTransactionResponse } from "@solana/web3.js";
 
+import {
+  findLeafAssetIdPda,
+  getBurnInstructionDataSerializer,
+  getMintToCollectionV1InstructionDataSerializer,
+  getTransferInstructionDataSerializer,
+  getBubblegumEventTypeSerializer,
+  getLeafSchemaSerializer,
+  LeafSchema,
+} from "@metaplex-foundation/mpl-bubblegum";
+
 import { handleBubblegumInstruction, BUBBLEGUM_PROGRAM_ID } from "./bubblegum";
 import {
   type GetSignaturesForAddressInput,
@@ -8,8 +18,10 @@ import {
   getTransaction,
 } from "../rpc/rpc";
 
+export const NOOPPROGRAMID = "noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV";
+
 export const processTransaction = async (
-  transaction: VersionedTransactionResponse,
+  transaction: VersionedTransactionResponse
 ) => {
   const accountKeys = transaction.transaction.message.getAccountKeys({
     accountKeysFromLookups: transaction.meta?.loadedAddresses,
@@ -26,10 +38,29 @@ export const processTransaction = async (
       })),
   ];
 
-  for (const { programIdIndex, data, accountKeyIndexes } of instructions) {
+  let leafSchema: LeafSchema;
+  for (const {
+    programIdIndex,
+    data,
+    accountKeyIndexes,
+  } of instructions.reverse()) {
     switch (accountKeys.get(programIdIndex)?.toBase58()) {
-      case BUBBLEGUM_PROGRAM_ID.toBase58():        
-        handleBubblegumInstruction(data, accountKeyIndexes, accountKeys);
+      case NOOPPROGRAMID:
+          if (Buffer.from(data.slice(0,8)).toString("hex") === "0100cb0000000100") {
+            leafSchema = getLeafSchemaSerializer().deserialize(
+              data.slice(8)
+            )[0];            
+          } 
+        break;
+
+      case BUBBLEGUM_PROGRAM_ID.toBase58():
+        await handleBubblegumInstruction(
+          data,
+          accountKeyIndexes,
+          accountKeys,
+          transaction,
+          leafSchema
+        );
         break;
     }
   }
@@ -47,7 +78,7 @@ export const processMerkleTreeTransactions = async ({
   console.log(
     `Found ${
       signatures.length
-    } new transactions on Merkle Tree ${address.toBase58()}...`,
+    } new transactions on Merkle Tree ${address.toBase58()}...`
   );
 
   for (let i = 0; i < signatures.length; i++) {
@@ -68,7 +99,7 @@ export const processMerkleTreeTransactions = async ({
 };
 
 export const processWebsocketMerkleTreeTransaction = async (
-  txSignature: string,
+  txSignature: string
 ) => {
   console.log("Fetching Transaction: ", txSignature);
 

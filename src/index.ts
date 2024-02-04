@@ -26,6 +26,15 @@ const main = async () => {
     { address: "Cu61XHSkbasbvBc3atv5NUMz6C8FYmocNkH7mtjLFjR7" },
     { address: "C8vRoSDJRUG2mjhKYA5iHZk1odL5vRc89nZu7LXKx3yr" },
     { address: "GHh4bn52FvfS2eHQ4LaQyeTAETDvd4Y2RvgjQwD6ZHVj" },
+    { address: "E4Jdig6NR54rDTC7XP72aGrexmMe6bADc4RYqH3eJjYZ" },
+    { address: "Hm1JSra1i2Wfk71YnnnrRxtCpkTAdniAPaVsrvvdb6wE" },
+    { address: "E4Jdig6NR54rDTC7XP72aGrexmMe6bADc4RYqH3eJjYZ" },
+    { address: "tS2srkdCZeqnzrFt25PbBFg4KoVJB4WtPUJnVidsY4p" },
+    { address: "E4Jdig6NR54rDTC7XP72aGrexmMe6bADc4RYqH3eJjYZ" },
+    { address: "trENTgAwckNbFLKxgLtwzcNBSjFpPcsC23LsqGNvbgN" },
+    { address: "Cf9Cqg3bvWiQV1euponc23F5su6pTD2yXA2zT5nqGfdw" },
+    { address: "Aju7YfPdhjaqJbRdow48PqxcWutDDHWww6eoDC9PVY7m" },
+    { address: "5vaKxbmSWaS716M4XLxY2cPqaLBxEn7wkiVZsZGs2t8z" },
 
     // devnet
     // { address: "r6frHpei4tXkNytXEjbBgtzZVEPtGKg338Q3rrHFEnk" },
