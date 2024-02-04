@@ -1,11 +1,18 @@
 # LightDAS
 LightDAS is a lighter version of the [Metaplex Digital Asset RPC API](https://github.com/metaplex-foundation/digital-asset-rpc-infrastructure)
 
+**[Demo](https://www.loom.com/share/6c39fe7e5c254b19b80f077d7c56f378)**
+
 It allows you to index specific Merkle Trees that you care about. This repository works as a listener and ingester for changes on the Merkle Trees you specify. It does the following:
 - Listen on the Merkle Tree address via RPC websockets
 - Parse a transaction and deserialize its data, events
 - Upsert the Metaplex's DAS database
 ![LightDAS drawio](https://github.com/WilfredAlmeida/LightDAS/assets/60785452/323da5a6-de11-45a0-bdd2-e5b28d547e71)
+
+### Reasons we are building LigthDAS
+- Running a standard DAS API is expensive and complicated
+- It gives you data off all of the NFTs on chain, but do you really need all of it?
+- There are select DAS offerings thus creating a monopolistic environment
 
 With LightDAS, you can have your own DAS API without the nft ingester or any other heavy lifting. The components you need to get your DAS running are:
 - LightDAS ingester (us)

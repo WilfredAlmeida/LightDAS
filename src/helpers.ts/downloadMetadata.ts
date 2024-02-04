@@ -1,11 +1,16 @@
 import axios from "axios";
 
 export const downloadMetadata = async (url: string) => {
-  const { data } = await axios.get(url);
+  try {
+    const { data } = await axios.get(url);
 
-  if (!data) {
+    if (!data) {
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error(error);
     return null;
   }
-
-  return data;
 };
