@@ -38,6 +38,11 @@ Follow the steps mentioned below
 - You'll see transaction signatures in the logs
 - Under heavy loads, we have faced RPC rate limits
 - You can inspect the database via Prisma Studio by running `npx prisma studio`
+- RPC Costs per NFT Mint:
+  - Quicknode:
+    - `logsSubscribe`: 50 credits
+    - `getTransaction`: 50 credits
+- Overall, each NFT mint will cost you 100 RPC credits
 
 **Currently LightDAS supports only Compressed NFTs with the following instructions**:
 - `mintToCollectionV1`
@@ -57,6 +62,7 @@ The following RFCs are open. We need your thoughts:
 The following is our roadmap in decreasing order of priority:  
 - Support more instructions
 - Rewrite in Rust and move away from TypeScript
+- Test out if LightDAS can work as a full fledged DAS. Since we're watching Merkle trees, we can also watch the Bubblegum program and index all NFT operations.
 
 ### The Future of LightDAS
 Our vision for LightDAS is to keep it an open-source public good for everyone. Currently, we don't have any plans to start a SaaS and compete in the space. We will continue to develop and maintain it as long as we can. The future decisions for LightDAS will be based on community feedback and discussions.
