@@ -72,7 +72,7 @@ The following is our roadmap in decreasing order of priority:
 - Test out if LightDAS can work as a full fledged DAS. Since we're watching Merkle trees, we can also watch the Bubblegum program and index all NFT operations.
 
 ### The Future of LightDAS
-Our vision for LightDAS is to keep it an open-source public good for everyone. Currently, we don't have any plans to start a SaaS and compete in the space. We will continue to develop and maintain it as long as we can. The future decisions for LightDAS will be based on community feedback and discussions.
+Our vision for LightDAS is to keep it an open-source public good for everyone. We aim to be a compliment to DAS, not to compete against it. Eventually, we would like to streamline the setup process to only need a single binary with minimal dependencies so it's easy for a project to setup a light DAS client to watch a tree and start serving requests. The future decisions for LightDAS will be based on community feedback and discussions.
 
 To keep building LightDAS, we need your support and thoughts. It can be contributions, money/grants, hiring us, providing us with resources, etc. Get in touch.
 
