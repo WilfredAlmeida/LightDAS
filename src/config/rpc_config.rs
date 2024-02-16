@@ -8,37 +8,21 @@ pub static PUBSUB_CLIENT: OnceLock<PubsubClient> = OnceLock::new();
 pub static RPC_CLIENT: OnceLock<RpcClient> = OnceLock::new();
 
 pub async fn initialize_clients() {
-    PUBSUB_CLIENT
-        .set(
-            PubsubClient::new(&env::var("WS_URL").expect("WS_URL not found"))
-                .await
-                .unwrap(),
-        )
-        .expect("Failed to set pubsub client");
+    PUBSUB_CLIENT.set(
+        PubsubClient::new(&env::var("WS_URL").expect("WS_URL not found"))
+            .await
+            .unwrap()
+    }).unwrap_or_else(|_| panic!("pubsub client already set"));
 
-    RPC_CLIENT.set(RpcClient::new(
-        env::var("RPC_URL").expect("RPC_URL not found"),
-    ));
-}
-
-pub fn get_rpc_client() -> &'static RpcClient {
-    let rpc_client = RPC_CLIENT.get();
-
-    match rpc_client {
-        Some(client) => return client,
-        None => {
-            panic!("Failed to get rpc client");
-        }
-    }
+    RPC_CLIENT
+        .set(RpcClient::new(env::var("RPC_URL").expect("RPC_URL not found")))
+		.unwrap_or_else(|_| panic!("rpc client already set"));;
 }
 
 pub fn get_pubsub_client() -> &'static PubsubClient {
-    let pubsub_client = PUBSUB_CLIENT.get();
+    PUBSUB_CLIENT.get().expect("failed to get pubsub client")
+}
 
-    match pubsub_client {
-        Some(client) => return client,
-        None => {
-            panic!("Failed to get pubsub client");
-        }
-    }
+pub fn get_rpc_client() -> &'static RpcClient {
+    RPC_CLIENT.get().expect("failed to get rpc client")
 }

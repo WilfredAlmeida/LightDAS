@@ -9,7 +9,7 @@ use solana_sdk::signature::Signature;
 use solana_transaction_status::{EncodedConfirmedTransactionWithStatusMeta, UiTransactionEncoding};
 
 pub async fn get_transaction_with_retries(
-    signature: &String,
+    signature: &str,
 ) -> Result<EncodedConfirmedTransactionWithStatusMeta, ClientError> {
     let rpc_client = get_rpc_client();
 
@@ -19,7 +19,7 @@ pub async fn get_transaction_with_retries(
     for _ in 0..MAX_RETRIES {
         let transaction = rpc_client
             .get_transaction_with_config(
-                &Signature::from_str(&signature).expect("Invalid transaction signature"),
+                &Signature::from_str(signature).expect("Invalid transaction signature"),
                 RpcTransactionConfig {
                     max_supported_transaction_version: Some(0),
                     encoding: Some(UiTransactionEncoding::JsonParsed),
