@@ -1793,20 +1793,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lDAS"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "dotenv",
- "futures",
- "solana-client",
- "solana-rpc-client-api",
- "solana-sdk",
- "solana-transaction-status",
- "tokio",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1876,6 +1862,20 @@ dependencies = [
  "ark-ff",
  "num-bigint 0.4.4",
  "thiserror",
+]
+
+[[package]]
+name = "lightdas"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dotenv",
+ "futures",
+ "solana-client",
+ "solana-rpc-client-api",
+ "solana-sdk",
+ "solana-transaction-status",
+ "tokio",
 ]
 
 [[package]]
