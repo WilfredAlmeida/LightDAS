@@ -1,5 +1,5 @@
 use anyhow::Result;
-use config::rpc_config::{initialize_clients, PUBSUB_CLIENT};
+use config::rpc_config::{get_pubsub_client, initialize_clients};
 use dotenv::dotenv;
 use futures::prelude::*;
 use processor::logs::process_logs;
@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
         // "Aju7YfPdhjaqJbRdow48PqxcWutDDHWww6eoDC9PVY7m".to_string(),
     ];
 
-    let pubsub_client = PUBSUB_CLIENT.get().expect("Failed to get pubsub client");
+    let pubsub_client = get_pubsub_client();
 
     let (mut stream, _) = pubsub_client
         .logs_subscribe(

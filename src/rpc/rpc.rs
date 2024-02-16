@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::time::Duration;
 
-use crate::config::rpc_config::RPC_CLIENT;
+use crate::config::rpc_config::get_rpc_client;
 use solana_client::client_error::{ClientError, ClientErrorKind};
 use solana_rpc_client_api::config::RpcTransactionConfig;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -11,7 +11,7 @@ use solana_transaction_status::{EncodedConfirmedTransactionWithStatusMeta, UiTra
 pub async fn get_transaction_with_retries(
     signature: &String,
 ) -> Result<EncodedConfirmedTransactionWithStatusMeta, ClientError> {
-    let rpc_client = RPC_CLIENT.get().expect("Failed to get rpc client");
+    let rpc_client = get_rpc_client();
 
     const MAX_RETRIES: usize = 30;
     let mut delay = 10;

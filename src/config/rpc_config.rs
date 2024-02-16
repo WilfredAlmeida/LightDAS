@@ -20,3 +20,25 @@ pub async fn initialize_clients() {
         env::var("RPC_URL").expect("RPC_URL not found"),
     ));
 }
+
+pub fn get_rpc_client() -> &'static RpcClient {
+    let rpc_client = RPC_CLIENT.get();
+
+    match rpc_client {
+        Some(client) => return client,
+        None => {
+            panic!("Failed to get rpc client");
+        }
+    }
+}
+
+pub fn get_pubsub_client() -> &'static PubsubClient {
+    let pubsub_client = PUBSUB_CLIENT.get();
+
+    match pubsub_client {
+        Some(client) => return client,
+        None => {
+            panic!("Failed to get pubsub client");
+        }
+    }
+}
