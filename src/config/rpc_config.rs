@@ -8,15 +8,19 @@ pub static PUBSUB_CLIENT: OnceLock<PubsubClient> = OnceLock::new();
 pub static RPC_CLIENT: OnceLock<RpcClient> = OnceLock::new();
 
 pub async fn initialize_clients() {
-    PUBSUB_CLIENT.set(
-        PubsubClient::new(&env::var("WS_URL").expect("WS_URL not found"))
-            .await
-            .unwrap()
-    }).unwrap_or_else(|_| panic!("pubsub client already set"));
+    PUBSUB_CLIENT
+        .set(
+            PubsubClient::new(&env::var("WS_URL").expect("WS_URL not found"))
+                .await
+                .unwrap(),
+        )
+        .unwrap_or_else(|_| panic!("pubsub client already set"));
 
     RPC_CLIENT
-        .set(RpcClient::new(env::var("RPC_URL").expect("RPC_URL not found")))
-		.unwrap_or_else(|_| panic!("rpc client already set"));;
+        .set(RpcClient::new(
+            env::var("RPC_URL").expect("RPC_URL not found"),
+        ))
+        .unwrap_or_else(|_| panic!("rpc client already set"));
 }
 
 pub fn get_pubsub_client() -> &'static PubsubClient {

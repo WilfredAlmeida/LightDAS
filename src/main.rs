@@ -1,4 +1,5 @@
 use anyhow::Result;
+use backfill::backfill::backfill_tree;
 use config::rpc_config::{get_pubsub_client, initialize_clients};
 use dotenv::dotenv;
 use futures::prelude::*;
@@ -6,7 +7,9 @@ use futures::{future::join_all, stream::select_all};
 use processor::logs::process_logs;
 use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 use solana_sdk::commitment_config::CommitmentConfig;
+use tokio::task;
 
+mod backfill;
 mod config;
 mod processor;
 mod rpc;
@@ -20,8 +23,15 @@ async fn main() -> Result<()> {
 
     let tree_addresses: Vec<String> = vec![
         "GXTXbFwcbNdWbiCWzZc3J2XGofopnhN9T98jnG29D2Yw".to_string(),
-        // "Aju7YfPdhjaqJbRdow48PqxcWutDDHWww6eoDC9PVY7m".to_string(),
+        "Aju7YfPdhjaqJbRdow48PqxcWutDDHWww6eoDC9PVY7m".to_string(),
+        "43XAHmPkq8Yth3swdqrh5aZvWrmuci5ZhPVLptreaUZ1".to_string(),
     ];
+
+    for tree_address in tree_addresses.clone() {
+        println!("backfilling tree: {}", tree_address);
+
+        task::spawn(backfill_tree(tree_address));
+    }
 
     let mut stream = select_all(
         join_all(tree_addresses.iter().map(|address| {
