@@ -76,6 +76,9 @@ Our vision for LightDAS is to keep it an open-source public good for everyone. W
 
 To keep building LightDAS, we need your support and thoughts. It can be contributions, money/grants, hiring us, providing us with resources, etc. Get in touch.
 
+### Licensing
+All code is licensed under the GNU Affero General Public License v3.0 or later.
+
 ### Humans at LightDAS
 [Wilfred Almeida](https://twitter.com/WilfredAlmeida_)  
 [Kartik Soneji](https://github.com/KartikSoneji)
