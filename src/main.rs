@@ -2,7 +2,7 @@ use std::pin::Pin;
 
 use anyhow::Result;
 use backfill::backfill::backfill_tree;
-use config::rpc_config::{get_pubsub_client, initialize_clients};
+use config::rpc_config::{get_pubsub_client, setup_rpc_clients};
 use dotenv::dotenv;
 use futures::future::join;
 use futures::prelude::*;
@@ -13,6 +13,8 @@ use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilt
 use solana_client::rpc_response::{Response, RpcLogsResponse};
 use solana_sdk::commitment_config::CommitmentConfig;
 use tokio::task;
+use crate::config::database::setup_database_config;
+use crate::config::env_config::{EnvConfig, setup_env_config};
 
 mod backfill;
 mod config;
@@ -22,9 +24,16 @@ mod rpc;
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv().ok();
-    initialize_clients().await;
+
+    let env_config = setup_env_config();
+
+    setup_rpc_clients(&env_config).await;
+
+    let database_pool = setup_database_config(&env_config).await;
 
     let pubsub_client = get_pubsub_client();
+
+
 
     let tree_addresses: Vec<String> = vec![
         // "GXTXbFwcbNdWbiCWzZc3J2XGofopnhN9T98jnG29D2Yw".to_string(),
@@ -32,7 +41,9 @@ async fn main() -> Result<()> {
         // "43XAHmPkq8Yth3swdqrh5aZvWrmuci5ZhPVLptreaUZ1".to_string(),
         // "EQQiiEceUo2uxHQgtRt8W92frLXwMUwdvt7P9Yo26cUM".to_string(),
         // "CkSa2n2eyJvsPLA7ufVos94NAUTYuVhaxrvH2GS69f9j".to_string()
-        "Dbx2uKULg44XeBR28tNWu2dU4bPpGfuYrd7RntgGXvuT".to_string()
+        "Dbx2uKULg44XeBR28tNWu2dU4bPpGfuYrd7RntgGXvuT".to_string(),
+        "CkSa2n2eyJvsPLA7ufVos94NAUTYuVhaxrvH2GS69f9j".to_string(),
+        "EBFsHQKYCn1obUr2FVNvGTkaUYf2p5jao2MVdbK5UNRH".to_string()
     ];
 
     let mut stream = select_all(

@@ -3,14 +3,16 @@ use std::env;
 use solana_client::nonblocking::pubsub_client::PubsubClient;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use std::sync::OnceLock;
+use crate::config::env_config::EnvConfig;
 
 pub static PUBSUB_CLIENT: OnceLock<PubsubClient> = OnceLock::new();
 pub static RPC_CLIENT: OnceLock<RpcClient> = OnceLock::new();
 
-pub async fn initialize_clients() {
+pub async fn setup_rpc_clients(config: &EnvConfig) {
+
     PUBSUB_CLIENT
         .set(
-            PubsubClient::new(&env::var("WS_URL").expect("WS_URL not found"))
+            PubsubClient::new(config.get_websocket_url())
                 .await
                 .unwrap(),
         )
@@ -18,7 +20,7 @@ pub async fn initialize_clients() {
 
     RPC_CLIENT
         .set(RpcClient::new(
-            env::var("RPC_URL").expect("RPC_URL not found"),
+            config.get_rpc_url().clone().to_owned(),
         ))
         .unwrap_or_else(|_| panic!("rpc client already set"));
 }
