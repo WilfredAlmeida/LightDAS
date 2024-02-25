@@ -3,7 +3,10 @@ name = "lightdas"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = [
+    "migration"
+]
 
 [dependencies]
 anyhow = "1.0.79"
@@ -13,6 +16,7 @@ futures = "0.3.30"
 lazy_static = "1.4.0"
 mpl-bubblegum = "1.2.0"
 plerkle_serialization = "1.6.0"
+sea-orm = { version = "0.10.6", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
 solana-client = "1.16.2"
 solana-rpc-client-api = "1.16.2"
 solana-sdk = "1.16.27"
