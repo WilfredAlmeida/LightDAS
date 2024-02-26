@@ -1,5 +1,7 @@
 use std::pin::Pin;
 
+use crate::config::database::setup_database_config;
+use crate::config::env_config::{setup_env_config, EnvConfig};
 use anyhow::Result;
 use backfill::backfill::backfill_tree;
 use config::rpc_config::{get_pubsub_client, setup_rpc_clients};
@@ -8,13 +10,12 @@ use futures::future::join;
 use futures::prelude::*;
 use futures::stream::SelectAll;
 use futures::{future::join_all, stream::select_all};
+use mpl_bubblegum::accounts::MerkleTree;
 use processor::logs::process_logs;
 use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 use solana_client::rpc_response::{Response, RpcLogsResponse};
 use solana_sdk::commitment_config::CommitmentConfig;
 use tokio::task;
-use crate::config::database::setup_database_config;
-use crate::config::env_config::{EnvConfig, setup_env_config};
 
 mod backfill;
 mod config;
@@ -33,8 +34,6 @@ async fn main() -> Result<()> {
 
     let pubsub_client = get_pubsub_client();
 
-
-
     let tree_addresses: Vec<String> = vec![
         // "GXTXbFwcbNdWbiCWzZc3J2XGofopnhN9T98jnG29D2Yw".to_string(),
         // "Aju7YfPdhjaqJbRdow48PqxcWutDDHWww6eoDC9PVY7m".to_string(),
@@ -43,7 +42,7 @@ async fn main() -> Result<()> {
         // "CkSa2n2eyJvsPLA7ufVos94NAUTYuVhaxrvH2GS69f9j".to_string()
         "Dbx2uKULg44XeBR28tNWu2dU4bPpGfuYrd7RntgGXvuT".to_string(),
         "CkSa2n2eyJvsPLA7ufVos94NAUTYuVhaxrvH2GS69f9j".to_string(),
-        "EBFsHQKYCn1obUr2FVNvGTkaUYf2p5jao2MVdbK5UNRH".to_string()
+        "EBFsHQKYCn1obUr2FVNvGTkaUYf2p5jao2MVdbK5UNRH".to_string(),
     ];
 
     let mut stream = select_all(
@@ -73,7 +72,9 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn handle_stream(mut stream: SelectAll<Pin<Box<dyn Stream<Item = Response<RpcLogsResponse>> + Send>>>) {
+async fn handle_stream(
+    mut stream: SelectAll<Pin<Box<dyn Stream<Item = Response<RpcLogsResponse>> + Send>>>,
+) {
     loop {
         let logs = stream.next().await.unwrap();
         process_logs(logs.value).await;

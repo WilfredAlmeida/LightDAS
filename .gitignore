@@ -2,3 +2,5 @@
 .env
 .vscode
 .idea
+digital_asset_types/
+migration/

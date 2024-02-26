@@ -1,8 +1,9 @@
 use solana_client::rpc_response::RpcLogsResponse;
 
-use crate::rpc::rpc::get_transaction_with_retries;
-
-use super::transaction::process_transaction;
+use crate::{
+    config::queue::{push_back, TransactionsQueue},
+    rpc::rpc::get_transaction_with_retries,
+};
 
 pub async fn process_logs(logs_response: RpcLogsResponse) {
     let transaction_signature = logs_response.signature;
@@ -11,5 +12,8 @@ pub async fn process_logs(logs_response: RpcLogsResponse) {
         .await
         .expect("Failed to get transaction");
 
-    process_transaction(transaction)
+    // push_back(TransactionsQueue{})
+
+    // process_transaction(transaction)
+    println!("websocket tx");
 }

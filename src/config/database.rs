@@ -1,8 +1,8 @@
+use crate::config::env_config::EnvConfig;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     ConnectOptions, PgPool,
 };
-use crate::config::env_config::EnvConfig;
 
 const BARE_MINIMUM_CONNECTIONS: u32 = 5;
 const DEFAULT_MAX: u32 = 125;

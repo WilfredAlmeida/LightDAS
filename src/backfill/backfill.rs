@@ -5,7 +5,7 @@ use crate::{
     rpc::rpc::{get_signatures_for_tree, get_transaction_with_retries},
 };
 
-use crate::processor::transaction::{process_transaction};
+use crate::processor::transaction::process_transaction;
 
 pub async fn backfill_tree(tree_address: String) {
     // TODO: Get this from database

@@ -1,27 +1,26 @@
-use std::{borrow::BorrowMut, collections::VecDeque, sync::OnceLock};
-use lazy_static::lazy_static; 
+use lazy_static::lazy_static;
 use std::sync::Mutex;
+use std::{borrow::BorrowMut, collections::VecDeque, sync::OnceLock};
 pub struct TransactionsQueue {
-  pub transaction_signature: String,
+    pub transaction_signature: String,
 }
 
-lazy_static!{
- static ref TRANSACTIONS_QUEUE: Mutex<VecDeque<TransactionsQueue>> = Mutex::new(VecDeque::new());
+lazy_static! {
+    static ref TRANSACTIONS_QUEUE: Mutex<VecDeque<TransactionsQueue>> = Mutex::new(VecDeque::new());
 }
 
 pub fn push_front(transaction: TransactionsQueue) {
-  TRANSACTIONS_QUEUE.lock().unwrap().push_front(transaction);
+    TRANSACTIONS_QUEUE.lock().unwrap().push_front(transaction);
 }
 
 pub fn pop_front() -> Option<TransactionsQueue> {
-  TRANSACTIONS_QUEUE.lock().unwrap().pop_front()
+    TRANSACTIONS_QUEUE.lock().unwrap().pop_front()
 }
 
 pub fn pop_back() -> Option<TransactionsQueue> {
-  TRANSACTIONS_QUEUE.lock().unwrap().pop_back()
+    TRANSACTIONS_QUEUE.lock().unwrap().pop_back()
 }
 
 pub fn push_back(transaction: TransactionsQueue) {
-  TRANSACTIONS_QUEUE.lock().unwrap().push_back(transaction)
+    TRANSACTIONS_QUEUE.lock().unwrap().push_back(transaction)
 }
-

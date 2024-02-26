@@ -1,6 +1,6 @@
 use std::env;
 
-pub struct EnvConfig{
+pub struct EnvConfig {
     rpc_url: String,
     websocket_url: String,
     database_url: String,
@@ -28,6 +28,6 @@ pub fn setup_env_config() -> EnvConfig {
     EnvConfig {
         websocket_url: env_ws_url,
         rpc_url: env_rpc_url,
-        database_url: env_db_url
+        database_url: env_db_url,
     }
 }
