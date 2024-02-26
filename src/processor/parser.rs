@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::fmt;
 use borsh::BorshDeserialize;
 use mpl_bubblegum::{
     get_instruction_type,
@@ -11,7 +12,6 @@ use mpl_bubblegum::{
 use solana_sdk::instruction::AccountMeta;
 use solana_sdk::pubkey;
 
-// #[derive(Clone)]
 pub enum BubblegumInstruction {
     MintV1 {
         accounts: MintV1,
@@ -122,5 +122,68 @@ impl BubblegumInstruction {
 
             _ => panic!("unknown instruction"),
        }
+    }
+}
+
+impl fmt::Debug for BubblegumInstruction {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use BubblegumInstruction::*;
+        match self {
+            MintV1{accounts, args} => fmt.debug_struct("BubblegumInstruction::MintV1")
+                .field("accounts::tree_config", &accounts.tree_config)
+                .field("accounts::leaf_owner", &accounts.leaf_owner)
+                .field("accounts::leaf_delegate", &accounts.leaf_delegate)
+                .field("accounts::merkle_tree", &accounts.merkle_tree)
+                .field("accounts::payer", &accounts.payer)
+                .field("accounts::tree_creator_or_delegate", &accounts.tree_creator_or_delegate)
+                .field("accounts::log_wrapper", &accounts.log_wrapper)
+                .field("accounts::compression_program", &accounts.compression_program)
+                .field("accounts::system_program", &accounts.system_program)
+                .field("accounts::args", &args)
+                .finish(),
+            
+            Transfer{accounts, args} => fmt.debug_struct("BubblegumInstruction::Transfer")
+                .field("accounts::tree_config", &accounts.tree_config)
+                .field("accounts::leaf_owner", &accounts.leaf_owner)
+                .field("accounts::leaf_delegate", &accounts.leaf_delegate)
+                .field("accounts::new_leaf_owner", &accounts.new_leaf_owner)
+                .field("accounts::merkle_tree", &accounts.merkle_tree)
+                .field("accounts::log_wrapper", &accounts.log_wrapper)
+                .field("accounts::compression_program", &accounts.compression_program)
+                .field("accounts::system_program", &accounts.system_program)
+                .field("args", &args)
+                .finish(),
+            
+            Burn{accounts, args} => fmt.debug_struct("BubblegumInstruction::Burn")
+                .field("accounts::tree_config", &accounts.tree_config)
+                .field("accounts::leaf_owner", &accounts.leaf_owner)
+                .field("accounts::leaf_delegate", &accounts.leaf_delegate)
+                .field("accounts::merkle_tree", &accounts.merkle_tree)
+                .field("accounts::log_wrapper", &accounts.log_wrapper)
+                .field("accounts::compression_program", &accounts.compression_program)
+                .field("accounts::system_program", &accounts.system_program)
+                .field("args", &args)
+                .finish(),
+            
+            MintToCollectionV1{accounts, args} => fmt.debug_struct("BubblegumInstruction::MintToCollectionV1")
+                .field("accounts::tree_config", &accounts.tree_config)
+                .field("accounts::leaf_owner", &accounts.leaf_owner)
+                .field("accounts::leaf_delegate", &accounts.leaf_delegate)
+                .field("accounts::merkle_tree", &accounts.merkle_tree)
+                .field("accounts::payer", &accounts.payer)
+                .field("accounts::tree_creator_or_delegate", &accounts.tree_creator_or_delegate)
+                .field("accounts::collection_authority", &accounts.collection_authority)
+                .field("accounts::collection_authority_record_pda", &accounts.collection_authority_record_pda)
+                .field("accounts::collection_mint", &accounts.collection_mint)
+                .field("accounts::collection_metadata", &accounts.collection_metadata)
+                .field("accounts::collection_edition", &accounts.collection_edition)
+                .field("accounts::bubblegum_signer", &accounts.bubblegum_signer)
+                .field("accounts::log_wrapper", &accounts.log_wrapper)
+                .field("accounts::compression_program", &accounts.compression_program)
+                .field("accounts::token_metadata_program", &accounts.token_metadata_program)
+                .field("accounts::system_program", &accounts.system_program)
+                .field("args", &args)
+                .finish(),
+        }
     }
 }
