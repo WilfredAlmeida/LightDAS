@@ -34,13 +34,12 @@ impl MigrationTrait for Migration {
                             .default(SimpleExpr::Keyword(Keyword::CurrentTimestamp))
                             .not_null(),
                     )
-                    .to_owned()
+                    .to_owned(),
             )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-
         manager
             .drop_table(Table::drop().table(MerkleTrees::Table).to_owned())
             .await
@@ -59,5 +58,5 @@ enum MerkleTrees {
     NumMinted,
     Signature,
     CreatedAt,
-    UpdatedAt
+    UpdatedAt,
 }

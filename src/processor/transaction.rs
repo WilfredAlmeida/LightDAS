@@ -16,6 +16,8 @@ use solana_sdk::instruction::AccountMeta;
 use solana_sdk::message::MessageHeader;
 use solana_transaction_status::parse_instruction::parse;
 
+use mpl_bubblegum::ID as MPL_BUBBLEGUM_ID;
+
 const MPL_TOKEN_METADATA_ID: Pubkey = pubkey!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 const SPL_NOOP_ID: Pubkey = pubkey!("noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV");
 
@@ -36,12 +38,8 @@ pub fn process_transaction(transaction: EncodedConfirmedTransactionWithStatusMet
     let instructions = message.instructions();
 
     instructions.iter().for_each(|instruction| {
-        println!(
-            "{:#?}",
-            account_keys[instruction.program_id_index as usize].to_string()
-        );
         match account_keys[instruction.program_id_index as usize] {
-            MPL_TOKEN_METADATA_ID => {
+            MPL_BUBBLEGUM_ID => {
                 println!("bubblegum instruction");
 
                 let MessageHeader {
@@ -67,6 +65,29 @@ pub fn process_transaction(transaction: EncodedConfirmedTransactionWithStatusMet
                         .as_slice(),
                     instruction.clone().data.as_slice(),
                 );
+                
+                println!("PARSED TX");
+
+                match parsed {
+                    BubblegumInstruction::MintV1 { accounts, args } => {
+                        println!("BUBBLEGUM");
+                        println!("{:#?}", accounts.merkle_tree);
+                        println!("{:#?}", args);
+                    }
+                    BubblegumInstruction::Transfer { accounts, args } => {
+                        println!("{:#?}", accounts.merkle_tree);
+                        println!("{:#?}", args);
+                    }
+                    BubblegumInstruction::Burn { accounts, args } => {
+                        println!("{:#?}", accounts.merkle_tree);
+                        println!("{:#?}", args);
+                    }
+                    BubblegumInstruction::MintToCollectionV1 { accounts, args } => {
+                        println!("{:#?}", accounts.merkle_tree);
+                        println!("{:#?}", args);
+                    }
+                }
+
                 // println!("{parsed:#?}");
             }
             SPL_NOOP_ID => {

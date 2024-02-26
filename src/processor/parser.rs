@@ -121,6 +121,6 @@ impl BubblegumInstruction {
             },
 
             _ => panic!("unknown instruction"),
-        }
+       }
     }
 }
