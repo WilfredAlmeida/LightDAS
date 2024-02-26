@@ -5,17 +5,19 @@ use blockbuster::{
     program_handler::ProgramParser,
     programs::{bubblegum::BubblegumParser, ProgramParseResult},
 };
-use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
+use solana_sdk::{commitment_config::CommitmentConfig, pubkey, pubkey::Pubkey};
 use solana_transaction_status::option_serializer::OptionSerializer;
 use solana_transaction_status::{EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions};
 use std::str::FromStr;
-// use solana_sdk::pubkey::Pubkey;
 
 use crate::processor::parser::BubblegumInstruction;
 use plerkle_serialization::{CompiledInstruction, Pubkey as PlerklePubKey, TransactionInfo};
 use solana_sdk::instruction::AccountMeta;
 use solana_sdk::message::MessageHeader;
 use solana_transaction_status::parse_instruction::parse;
+
+const MPL_TOKEN_METADATA_ID: Pubkey = pubkey!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+const SPL_NOOP_ID: Pubkey = pubkey!("noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV");
 
 pub fn process_transaction(transaction: EncodedConfirmedTransactionWithStatusMeta) {
     let bubblegum_parser = BubblegumParser {};
@@ -33,14 +35,12 @@ pub fn process_transaction(transaction: EncodedConfirmedTransactionWithStatusMet
     let account_keys = message.static_account_keys();
     let instructions = message.instructions();
 
-    let spl_noop_id: String = String::from("noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV");
-
     instructions.iter().for_each(|instruction| {
         println!(
             "{:#?}",
             account_keys[instruction.program_id_index as usize].to_string()
         );
-        match account_keys[instruction.program_id_index as usize].to_string() {
+        match account_keys[instruction.program_id_index as usize] {
             MPL_TOKEN_METADATA_ID => {
                 println!("bubblegum instruction");
 
@@ -69,7 +69,7 @@ pub fn process_transaction(transaction: EncodedConfirmedTransactionWithStatusMet
                 );
                 // println!("{parsed:#?}");
             }
-            spl_noop_id => {
+            SPL_NOOP_ID => {
                 println!("noop instruction")
             }
             _ => {

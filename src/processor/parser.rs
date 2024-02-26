@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use borsh::BorshDeserialize;
 use mpl_bubblegum::{
     get_instruction_type,
@@ -32,18 +33,19 @@ pub enum BubblegumInstruction {
 
 impl BubblegumInstruction {
     pub fn parse(account_metas: &[AccountMeta], data: &[u8]) -> BubblegumInstruction {
-        let mut accounts_iter = account_metas.iter();
-        let mut next_account_meta = || {
+        let accounts_iter = RefCell::new(account_metas.into_iter());
+        let next_account_meta = || {
             accounts_iter
+                .borrow_mut()
                 .next()
                 .expect("incorrect number of accounts for instruction")
         };
-        let mut next_account = || next_account_meta().clone().pubkey.clone();
-        let mut next_account_option = || match next_account() {
+        let next_account = || next_account_meta().clone().pubkey.clone();
+        let next_account_option = || match next_account() {
             MPL_BUBBLEGUM_ID => None,
             key => Some(key),
         };
-        let mut next_account_with_signer = || {
+        let next_account_with_signer = || {
             let &AccountMeta {
                 pubkey, is_signer, ..
             } = next_account_meta();
@@ -65,7 +67,7 @@ impl BubblegumInstruction {
                     compression_program: next_account(),
                     system_program: next_account(),
                 },
-                args: MintV1InstructionArgs::deserialize(&mut &arg_data)
+                args: MintV1InstructionArgs::deserialize(&mut arg_data)
                     .expect("could not parse args data"),
             },
             InstructionName::Transfer => BubblegumInstruction::Transfer {
@@ -79,7 +81,7 @@ impl BubblegumInstruction {
                     compression_program: next_account(),
                     system_program: next_account(),
                 },
-                args: TransferInstructionArgs::deserialize(&mut &arg_data)
+                args: TransferInstructionArgs::deserialize(&mut arg_data)
                     .expect("could not parse args data"),
             },
             InstructionName::Burn => BubblegumInstruction::Burn {
@@ -92,7 +94,7 @@ impl BubblegumInstruction {
                     compression_program: next_account(),
                     system_program: next_account(),
                 },
-                args: BurnInstructionArgs::deserialize(&mut &arg_data)
+                args: BurnInstructionArgs::deserialize(&mut arg_data)
                     .expect("could not parse args data"),
             },
             InstructionName::MintToCollectionV1 => BubblegumInstruction::MintToCollectionV1 {
@@ -114,11 +116,11 @@ impl BubblegumInstruction {
                     token_metadata_program: next_account(),
                     system_program: next_account(),
                 },
-                args: MintToCollectionV1InstructionArgs::deserialize(&mut &arg_data)
+                args: MintToCollectionV1InstructionArgs::deserialize(&mut arg_data)
                     .expect("could not parse args data"),
             },
 
-            unknown => panic!("unknown instruction"),
+            _ => panic!("unknown instruction"),
         }
     }
 }
