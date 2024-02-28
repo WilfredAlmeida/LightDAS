@@ -1,7 +1,7 @@
 use program_transformers::ProgramTransformer;
 use sqlx::{Pool, Postgres};
 
-use crate::{config::queue::pop_front, rpc::rpc::get_transaction_with_retries};
+use crate::{config::transaction_queue::pop_front, rpc::rpc::get_transaction_with_retries};
 
 use super::transaction::process_transaction;
 use futures::future::{ready, FutureExt};

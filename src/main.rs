@@ -1,4 +1,6 @@
 use std::pin::Pin;
+use std::thread::sleep;
+use std::time::Duration;
 
 use crate::config::database::setup_database_config;
 use crate::config::env_config::{setup_env_config, EnvConfig};
@@ -12,10 +14,12 @@ use futures::stream::SelectAll;
 use futures::{future::join_all, stream::select_all};
 use mpl_bubblegum::accounts::MerkleTree;
 use processor::logs::process_logs;
+use processor::metadata::fetch_store_metadata;
 use processor::queue_processor::process_transactions_queue;
 use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 use solana_client::rpc_response::{Response, RpcLogsResponse};
 use solana_sdk::commitment_config::CommitmentConfig;
+use sqlx::Acquire;
 use tokio::task;
 
 mod backfill;
@@ -47,6 +51,8 @@ async fn main() -> Result<()> {
         // "14b9wzhVSaiUHB4t8tDY9QYNsGStT8ycaoLkBHZLZwax".to_string(),
         // "6kAoPaZV4aB1rMPTPkbgycb9iNbHHibSzjhAvWEroMm".to_string(),
         "FmUjM4YBLK93WSb7AnbuYZy1h2kCcjZM8kHsi9ZU93TP".to_string(),
+        "6JTnMcq9a6atrqmsz4rgTWp9EG5YPzxoobD7vg1csNt5".to_string(),
+        "HVGMVJ7DyfXLU2H5AJSHvX2HkFrRrHQAoXAHfYUmicYr".to_string(),
     ];
 
     let mut stream = select_all(
@@ -71,6 +77,8 @@ async fn main() -> Result<()> {
 
     let handle = task::spawn(handle_stream(stream));
 
+    task::spawn(handle_metadata_downloads());
+
     // join_all(tree_addresses.into_iter().map(backfill_tree)).await;
 
     task::spawn(process_transactions_queue(database_pool.clone())).await?;
@@ -84,5 +92,12 @@ async fn handle_stream(
     loop {
         let logs = stream.next().await.unwrap();
         process_logs(logs.value).await;
+    }
+}
+
+async fn handle_metadata_downloads() {
+    loop {
+        fetch_store_metadata().await;
+        sleep(Duration::from_secs(5))
     }
 }

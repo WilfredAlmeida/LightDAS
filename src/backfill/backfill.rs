@@ -1,7 +1,7 @@
 use solana_rpc_client_api::response::RpcConfirmedTransactionStatusWithSignature;
 
 use crate::{
-    config::queue::{push_front, TransactionsQueue},
+    config::transaction_queue::{push_front, TransactionsQueue},
     rpc::rpc::{get_signatures_for_tree, get_transaction_with_retries},
 };
 

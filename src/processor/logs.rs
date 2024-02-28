@@ -1,7 +1,7 @@
 use solana_client::rpc_response::RpcLogsResponse;
 
 use crate::{
-    config::queue::{push_back, TransactionsQueue},
+    config::transaction_queue::{push_back, TransactionsQueue},
     rpc::rpc::get_transaction_with_retries,
 };
 
