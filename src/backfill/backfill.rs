@@ -19,11 +19,7 @@ pub async fn backfill_tree(tree_address: String) {
         last_processed_tx = Some(&signatures[0].signature);
 
         for signature in &signatures {
-            let transaction = get_transaction_with_retries(&signature.signature)
-                .await
-                .unwrap();
-
-            process_transaction(transaction);
+            
             println!("backfill tx");
 
             push_front(TransactionsQueue {

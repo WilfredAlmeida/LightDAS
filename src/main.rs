@@ -12,6 +12,7 @@ use futures::stream::SelectAll;
 use futures::{future::join_all, stream::select_all};
 use mpl_bubblegum::accounts::MerkleTree;
 use processor::logs::process_logs;
+use processor::queue_processor::process_transactions_queue;
 use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 use solana_client::rpc_response::{Response, RpcLogsResponse};
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -40,9 +41,11 @@ async fn main() -> Result<()> {
         // "43XAHmPkq8Yth3swdqrh5aZvWrmuci5ZhPVLptreaUZ1".to_string(),
         // "EQQiiEceUo2uxHQgtRt8W92frLXwMUwdvt7P9Yo26cUM".to_string(),
         // "CkSa2n2eyJvsPLA7ufVos94NAUTYuVhaxrvH2GS69f9j".to_string()
-        "Dbx2uKULg44XeBR28tNWu2dU4bPpGfuYrd7RntgGXvuT".to_string(),
-        "CkSa2n2eyJvsPLA7ufVos94NAUTYuVhaxrvH2GS69f9j".to_string(),
-        "EBFsHQKYCn1obUr2FVNvGTkaUYf2p5jao2MVdbK5UNRH".to_string(),
+        // "Dbx2uKULg44XeBR28tNWu2dU4bPpGfuYrd7RntgGXvuT".to_string(),
+        // "CkSa2n2eyJvsPLA7ufVos94NAUTYuVhaxrvH2GS69f9j".to_string(),
+        // "EBFsHQKYCn1obUr2FVNvGTkaUYf2p5jao2MVdbK5UNRH".to_string(),
+        // "14b9wzhVSaiUHB4t8tDY9QYNsGStT8ycaoLkBHZLZwax".to_string(),
+        "6kAoPaZV4aB1rMPTPkbgycb9iNbHHibSzjhAvWEroMm".to_string(),
     ];
 
     let mut stream = select_all(
@@ -67,7 +70,9 @@ async fn main() -> Result<()> {
 
     let handle = task::spawn(handle_stream(stream));
 
-    join_all(tree_addresses.into_iter().map(backfill_tree)).await;
+    // join_all(tree_addresses.into_iter().map(backfill_tree)).await;
+
+    task::spawn(process_transactions_queue(database_pool.clone())).await?;
 
     Ok(())
 }
