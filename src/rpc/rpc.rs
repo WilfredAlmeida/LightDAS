@@ -24,7 +24,7 @@ pub async fn get_transaction_with_retries(
                 &Signature::from_str(signature).expect("Invalid transaction signature"),
                 RpcTransactionConfig {
                     max_supported_transaction_version: Some(0),
-                    encoding: Some(UiTransactionEncoding::Base64),
+                    encoding: Some(UiTransactionEncoding::Base58),
                     commitment: Some(CommitmentConfig::confirmed()),
                 },
             )

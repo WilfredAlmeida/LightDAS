@@ -45,6 +45,7 @@ serde_json = {workspace=true}
 spl-concurrent-merkle-tree = {workspace=true}
 thiserror = {workspace=true}
 url = {workspace=true}
+base64 = "0.22.0"
 
 
 
