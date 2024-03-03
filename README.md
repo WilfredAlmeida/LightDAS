@@ -1,3 +1,5 @@
+## NOTE: This branch is no longer maintained and updated. LightDAS has moved to Rust from TypeScript
+
 # LightDAS
 LightDAS is a lighter version of the [Metaplex Digital Asset RPC API](https://github.com/metaplex-foundation/digital-asset-rpc-infrastructure)
 
