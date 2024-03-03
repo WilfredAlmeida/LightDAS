@@ -1,7 +1,8 @@
 # LightDAS
 LightDAS is a lighter version of the [Metaplex Digital Asset RPC API](https://github.com/metaplex-foundation/digital-asset-rpc-infrastructure)
 
-**[MUST WATCH DEMO](https://www.loom.com/share/cdea6acd488d4202a16992b45b6e25d1?sid=112a4cc3-4f67-4e1f-a60d-f84c5fad59e2)**
+**[MUST WATCH DEMO](https://www.loom.com/share/cdea6acd488d4202a16992b45b6e25d1?sid=112a4cc3-4f67-4e1f-a60d-f84c5fad59e2)**  
+**[Pitch Deck](https://pitch.com/v/lightdas-gjrunw)**
 
 It allows you to index specific Merkle Trees that you care about. This repository works as a listener and ingester for changes on the Merkle Trees you specify. It does the following:
 - Listen on the Merkle Tree address via RPC websockets
