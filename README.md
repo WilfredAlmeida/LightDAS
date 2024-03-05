@@ -10,6 +10,18 @@ It allows you to index specific Merkle Trees that you care about. This repositor
 - Upsert the Metaplex's DAS database
 ![LightDAS drawio](https://github.com/WilfredAlmeida/LightDAS/assets/60785452/323da5a6-de11-45a0-bdd2-e5b28d547e71)
 
+
+### Backfilling and Live Transactions Indexing Process
+![lightdas-queue](https://github.com/WilfredAlmeida/LightDAS/assets/60785452/e24fcc69-e5fa-406e-99a3-1cce22815740)
+1. LightDAS is started and calls `getSignaturesForAddress` on the Merkle Tree
+2. It returns transaction signatures from the latest to the first
+3. These are put into the queue one by one via push front. So when step 1 is completed, the queue will have all transaction signatures in an order of first to latest for backfilling
+4. LightDAS in parallel to step 1, also calls `logsSubscribe` on the Merkle Trees and listens to live transaction happening on them
+5. These are put into the queue one by one via push-back
+6. After step 1 is completed and all transaction signatures are present in the queue, a processes task starts in parallel and, processes transactions
+7. These processed transactions are inserted into the Metaplex DAS Database
+8. The Metaplex DAS API serves DAS requests by interacting with the DAS database
+
 ### Reasons we are building LigthDAS
 - Running a standard DAS API is expensive and complicated
 - It gives you data off all of the NFTs on chain, but do you really need all of it?
