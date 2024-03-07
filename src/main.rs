@@ -16,10 +16,11 @@ use mpl_bubblegum::accounts::MerkleTree;
 use processor::logs::process_logs;
 use processor::metadata::fetch_store_metadata;
 use processor::queue_processor::process_transactions_queue;
+use sea_orm::SqlxPostgresConnector;
 use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 use solana_client::rpc_response::{Response, RpcLogsResponse};
 use solana_sdk::commitment_config::CommitmentConfig;
-use sqlx::Acquire;
+use sqlx::{Acquire, PgPool};
 use tokio::task;
 
 mod backfill;
@@ -77,7 +78,7 @@ async fn main() -> Result<()> {
 
     let handle = task::spawn(handle_stream(stream));
 
-    task::spawn(handle_metadata_downloads());
+    task::spawn(handle_metadata_downloads(database_pool.clone()));
 
     // join_all(tree_addresses.into_iter().map(backfill_tree)).await;
 
@@ -95,9 +96,10 @@ async fn handle_stream(
     }
 }
 
-async fn handle_metadata_downloads() {
+async fn handle_metadata_downloads(pool: PgPool) {
+    let connection = SqlxPostgresConnector::from_sqlx_postgres_pool(pool);
     loop {
-        fetch_store_metadata().await;
+        fetch_store_metadata(&connection).await;
         sleep(Duration::from_secs(5))
     }
 }

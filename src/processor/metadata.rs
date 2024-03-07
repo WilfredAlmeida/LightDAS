@@ -3,21 +3,16 @@ use std::time::Duration;
 use digital_asset_types::{dao::asset_data, json};
 use reqwest::{Client, ClientBuilder};
 use sea_orm::{
-    ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect, Set,
-    Unchanged,
+    ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect, Set, Unchanged,
 };
 
-pub async fn fetch_store_metadata() -> Result<bool, reqwest::Error> {
+pub async fn fetch_store_metadata(database: &DatabaseConnection) -> Result<bool, reqwest::Error> {
     println!("Fetching Metadata");
-    let database: DatabaseConnection =
-        Database::connect("postgres://solana:solana@localhost:5432/solana")
-            .await
-            .unwrap();
 
     let assets = asset_data::Entity::find()
         .columns([asset_data::Column::Id, asset_data::Column::MetadataUrl])
         .filter(asset_data::Column::Reindex.eq(true))
-        .all(&database)
+        .all(database)
         .await
         .unwrap();
 
@@ -47,7 +42,7 @@ pub async fn fetch_store_metadata() -> Result<bool, reqwest::Error> {
 
             asset_data::Entity::update(model)
                 .filter(asset_data::Column::Id.eq(asset.id))
-                .exec(&database)
+                .exec(database)
                 .await
                 .unwrap();
 

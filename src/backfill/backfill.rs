@@ -19,7 +19,6 @@ pub async fn backfill_tree(tree_address: String) {
         last_processed_tx = Some(&signatures[0].signature);
 
         for signature in &signatures {
-            
             println!("backfill tx");
 
             push_front(TransactionsQueue {
