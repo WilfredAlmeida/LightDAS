@@ -1,34 +1,48 @@
+use std::panic;
+use std::str::FromStr;
+
+use solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey};
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, InnerInstruction, InnerInstructions,
-    UiInnerInstructions, UiInstruction,
+    UiInnerInstructions, UiInstruction, UiLoadedAddresses,
 };
 
-use std::panic;
-
 use program_transformers::{ProgramTransformer, TransactionInfo};
-
-use solana_sdk::instruction::CompiledInstruction;
 
 pub async fn process_transaction(
     program_transformer: &ProgramTransformer,
     transaction: EncodedConfirmedTransactionWithStatusMeta,
 ) {
-    let inner_instructions: Option<Vec<UiInnerInstructions>> = transaction
+    let meta = transaction
         .transaction
         .meta
         .to_owned()
-        .unwrap()
-        .inner_instructions
-        .into();
+        .expect("transaction does not have meta");
+    let inner_instructions: Option<Vec<UiInnerInstructions>> = meta.inner_instructions.into();
     let tsx = transaction.transaction.transaction;
     let unwrapped_transaction = tsx.decode().unwrap();
     let message = unwrapped_transaction.message;
+
+    let loaded_addresses =
+        Into::<Option<UiLoadedAddresses>>::into(meta.loaded_addresses).unwrap_or_default();
+    let mut account_keys = Vec::from(message.static_account_keys());
+    account_keys.extend(
+        loaded_addresses
+            .writable
+            .into_iter()
+            .chain(loaded_addresses.readonly.into_iter())
+            .map(|key| {
+                Pubkey::from_str(&key).map_err(|e| format!("could not parse pubkey: {key}: {e}"))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .expect("could not read additional addresses"),
+    );
 
     let res = program_transformer
         .handle_transaction(&TransactionInfo {
             slot: transaction.slot,
             signature: &unwrapped_transaction.signatures[0],
-            account_keys: &message.static_account_keys(),
+            account_keys: &account_keys,
             message_instructions: &message.instructions(),
             meta_inner_instructions: inner_instructions
                 .unwrap_or_default()
