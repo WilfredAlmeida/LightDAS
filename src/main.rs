@@ -51,9 +51,10 @@ async fn main() -> Result<()> {
         // "EBFsHQKYCn1obUr2FVNvGTkaUYf2p5jao2MVdbK5UNRH".to_string(),
         // "14b9wzhVSaiUHB4t8tDY9QYNsGStT8ycaoLkBHZLZwax".to_string(),
         // "6kAoPaZV4aB1rMPTPkbgycb9iNbHHibSzjhAvWEroMm".to_string(),
-        "FmUjM4YBLK93WSb7AnbuYZy1h2kCcjZM8kHsi9ZU93TP".to_string(),
-        "6JTnMcq9a6atrqmsz4rgTWp9EG5YPzxoobD7vg1csNt5".to_string(),
-        "HVGMVJ7DyfXLU2H5AJSHvX2HkFrRrHQAoXAHfYUmicYr".to_string(),
+        // "FmUjM4YBLK93WSb7AnbuYZy1h2kCcjZM8kHsi9ZU93TP".to_string(),
+        // "6JTnMcq9a6atrqmsz4rgTWp9EG5YPzxoobD7vg1csNt5".to_string(),
+        // "HVGMVJ7DyfXLU2H5AJSHvX2HkFrRrHQAoXAHfYUmicYr".to_string(),
+        "D8yRakvsjWSR3ihANhwjP8RmNLg3A46EA1V1EbMLDT8B".to_string(),
     ];
 
     let mut stream = select_all(
@@ -99,7 +100,8 @@ async fn handle_stream(
 async fn handle_metadata_downloads(pool: PgPool) {
     let connection = SqlxPostgresConnector::from_sqlx_postgres_pool(pool);
     loop {
-        fetch_store_metadata(&connection).await;
+        let _ = fetch_store_metadata(&connection).await;
+        println!("No metadata to update, sleeping for 5 secs");
         sleep(Duration::from_secs(5))
     }
 }

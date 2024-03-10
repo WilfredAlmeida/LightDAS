@@ -16,6 +16,8 @@ pub async fn fetch_store_metadata(database: &DatabaseConnection) -> Result<bool,
         .await
         .unwrap();
 
+    println!("Assets to update: {:?}", assets.len());
+
     for asset in assets {
         let asset_id = &asset.id;
 
@@ -29,25 +31,25 @@ pub async fn fetch_store_metadata(database: &DatabaseConnection) -> Result<bool,
 
         if response.status() != reqwest::StatusCode::OK {
             println!("Download Metadata Error");
-            return Ok(false);
-        } else {
-            let val: serde_json::Value = response.json().await?;
-
-            let model = asset_data::ActiveModel {
-                id: Unchanged(asset_id.clone()),
-                metadata: Set(val),
-                reindex: Set(Some(false)),
-                ..Default::default()
-            };
-
-            asset_data::Entity::update(model)
-                .filter(asset_data::Column::Id.eq(asset.id))
-                .exec(database)
-                .await
-                .unwrap();
-
-            println!("Metadata Updated")
+            continue;
         }
+
+        let val: serde_json::Value = response.json().await?;
+
+        let model = asset_data::ActiveModel {
+            id: Unchanged(asset_id.clone()),
+            metadata: Set(val),
+            reindex: Set(Some(false)),
+            ..Default::default()
+        };
+
+        asset_data::Entity::update(model)
+            .filter(asset_data::Column::Id.eq(asset.id))
+            .exec(database)
+            .await
+            .unwrap();
+
+        println!("Metadata Updated")
     }
 
     Ok(true)
