@@ -1,8 +1,11 @@
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 use std::{borrow::BorrowMut, collections::VecDeque, sync::OnceLock};
+
+#[derive(Clone, Debug)]
 pub struct TransactionsQueue {
     pub transaction_signature: String,
+    pub tree_address: Option<String>,
 }
 
 lazy_static! {

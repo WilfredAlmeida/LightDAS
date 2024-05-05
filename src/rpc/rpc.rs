@@ -54,11 +54,15 @@ pub async fn get_transaction_with_retries(
 pub async fn get_signatures_for_tree(
     tree_address: &str,
     last_processed_tx: Option<&String>,
+    until_signature: Option<&String>,
 ) -> Vec<RpcConfirmedTransactionStatusWithSignature> {
     let tree_address_pubkey = Pubkey::from_str(tree_address).expect("Invalid tree address");
 
     let last_processed_tx_signature = last_processed_tx
         .map(|signature| Signature::from_str(signature).expect("Invalid signature"));
+
+    let until_tx_signature =
+        until_signature.map(|signature| Signature::from_str(signature).expect("Invalid signature"));
 
     let rpc_client = get_rpc_client();
 
@@ -68,6 +72,7 @@ pub async fn get_signatures_for_tree(
             GetConfirmedSignaturesForAddress2Config {
                 commitment: Some(CommitmentConfig::confirmed()),
                 before: last_processed_tx_signature,
+                until: until_tx_signature,
                 ..Default::default()
             },
         )

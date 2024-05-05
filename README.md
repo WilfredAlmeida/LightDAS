@@ -64,6 +64,9 @@ Follow the steps mentioned below
 ### Testing
 If the program is running without any errors then the database is populated with information on new NFT mints. You can query the RPC API locally. It runs on the default URL `http://localhost:9090/`
 
+### Note
+1. Asynchronous backfilling is broken and the logic needs to be redone
+2. Backfilling is disabled by default, enable it by uncommenting the block at `src/main.rs:148`
 
 ### Support
 If you need any help, have any thoughts, or need to get in touch, DM [Wilfred](https://twitter.com/WilfredAlmeida_) on Twitter/X or open an issue.

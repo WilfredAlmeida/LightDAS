@@ -1,6 +1,7 @@
 use std::panic;
 use std::str::FromStr;
 
+use anyhow::Error;
 use solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey};
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, InnerInstruction, InnerInstructions,
@@ -12,7 +13,7 @@ use program_transformers::{ProgramTransformer, TransactionInfo};
 pub async fn process_transaction(
     program_transformer: &ProgramTransformer,
     transaction: EncodedConfirmedTransactionWithStatusMeta,
-) {
+) -> Result<(), Error> {
     let meta = transaction
         .transaction
         .meta
@@ -68,8 +69,13 @@ pub async fn process_transaction(
                 .collect::<Vec<_>>()
                 .as_slice(),
         })
-        .await
-        .unwrap();
+        .await;
 
-    println!("HANDLED TX")
+    if let Err(e) = res {
+        println!("TX HANDLING ERROR: {:?}", e);
+        return Ok(());
+    }
+
+    println!("HANDLED TX");
+    Ok(())
 }

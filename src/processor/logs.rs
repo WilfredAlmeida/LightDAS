@@ -9,7 +9,8 @@ pub async fn process_logs(logs_response: RpcLogsResponse) {
     let transaction_signature = logs_response.signature;
 
     println!("websocket tx");
-    push_back(TransactionsQueue{
-        transaction_signature: transaction_signature.clone()
+    push_back(TransactionsQueue {
+        transaction_signature: transaction_signature.clone(),
+        tree_address: None,
     });
 }
