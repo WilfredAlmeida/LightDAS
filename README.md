@@ -10,6 +10,16 @@ It allows you to index specific Merkle Trees that you care about. This repositor
 - Upsert the Metaplex's DAS database
 ![LightDAS drawio](https://github.com/WilfredAlmeida/LightDAS/assets/60785452/323da5a6-de11-45a0-bdd2-e5b28d547e71)
 
+### LightDAS Working
+![image](https://github.com/WilfredAlmeida/LightDAS/assets/60785452/e2c7a9fd-ae44-43bb-9c53-3f83cd53e118)
+1. LightDAS is started. It fetches trees to index from `ld_merkle_trees` table
+2. It starts the backfiller which fetches, parses and stores past transactions for the tree
+3. It initiates a websocket subscription to listen for live transactions happening on the tree
+4. Live transactions are queued in a Rust channel since it is necessary to process transactions in order
+5. The backfiller parses transactions and updates the database
+6. After the backfilling is complete, processing of the live transactions is initiated. It fetches transactions from the channel from step 4
+7. It parses the transactions and updates the database
+
 ### Reasons we are building LigthDAS
 - Running a standard DAS API is expensive and complicated
 - It gives you data off all of the NFTs on chain, but do you really need all of it?
