@@ -1,6 +1,6 @@
 [package]
 name = "lightdas"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [workspace]
@@ -86,7 +86,7 @@ path = "src/main.rs"
 edition = "2021"
 publish = false
 repository = "https://github.com/WilfredAlmeida/LightDAS"
-version = "0.1.0"
+version = "0.2.0"
 
 [workspace.dependencies]
 anyhow = "1.0.86"
