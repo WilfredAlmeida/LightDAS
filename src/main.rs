@@ -1,36 +1,50 @@
-use std::iter;
 use std::pin::Pin;
-use std::str::{Bytes, FromStr};
-// use std::thread::sleep;
+
+use std::str::FromStr;
+use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 use crate::config::database::setup_database_config;
 use crate::config::env_config::{setup_env_config, EnvConfig};
 use anyhow::Result;
-use backfill::backfill::backfill_tree;
 use config::rpc_config::{get_pubsub_client, setup_rpc_clients};
+use das_bubblegum_backfill::worker::{
+    GapWorkerArgs, ProgramTransformerWorkerArgs, SignatureWorkerArgs,
+};
+use das_bubblegum_backfill::{
+    start_bubblegum_backfill, BubblegumBackfillArgs, BubblegumBackfillContext,
+};
+use das_core::{MetadataJsonDownloadWorkerArgs, Rpc, SolanaRpcArgs};
 use dotenv::dotenv;
-use futures::future::join;
+
 use futures::prelude::*;
-use futures::stream::SelectAll;
-use futures::{future::join_all, stream::select_all};
-use mpl_bubblegum::accounts::MerkleTree;
-use processor::logs::process_logs;
-use processor::metadata::fetch_store_metadata;
-use processor::queue_processor::process_transactions_queue;
-use sea_orm::{ConnectionTrait, Database, DatabaseConnection, SqlxPostgresConnector, Statement};
+
+use log::info;
+use mpl_token_metadata::types::Data;
+use processor::transactions_channel_processor::process_transactions_channel;
+use program_transformers::ProgramTransformer;
+
+use sea_orm::{ConnectionTrait, DatabaseConnection, SqlxPostgresConnector, Statement};
 use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 use solana_client::rpc_response::{Response, RpcLogsResponse};
 use solana_sdk::commitment_config::CommitmentConfig;
-use solana_sdk::pubkey::Pubkey;
-use sqlx::{Acquire, PgPool};
-use tokio::task;
-use tokio::time::sleep;
 
-mod backfill;
+use solana_sdk::pubkey::Pubkey;
+use sqlx::{Pool, Postgres};
+
+use tokio::task::{self};
+
+use signal_hook::{consts::signal::SIGHUP, iterator::Signals};
+
 mod config;
 mod processor;
 mod rpc;
+
+struct State {
+    tree_addresses: Vec<String>,
+    tasks: Vec<(String, task::JoinHandle<()>)>,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -42,36 +56,94 @@ async fn main() -> Result<()> {
 
     let database_pool = setup_database_config(&env_config).await;
 
-    let db_connection = SqlxPostgresConnector::from_sqlx_postgres_pool(database_pool.clone());
+    if let Err(e) = configure_database(SqlxPostgresConnector::from_sqlx_postgres_pool(
+        database_pool.clone(),
+    ))
+    .await
+    {
+        panic!("Error configuring database: {:?}", e);
+    }
 
-    // Refer https://github.com/WilfredAlmeida/LightDAS/issues/4 to understand why this is needed
-    let _ = db_connection
-        .execute(Statement::from_string(
-            sea_orm::DatabaseBackend::Postgres,
-            String::from(
-                "CREATE TABLE IF NOT EXISTS LD_MERKLE_TREES (
-                    ADDRESS VARCHAR(255),
-                    TAG VARCHAR(255) NULL,
-                    CAPACITY INT NULL,
-                    MAX_DEPTH INT NULL,
-                    CANOPY_DEPTH INT NULL,
-                    MAX_BUFFER_SIZE INT NULL,
-                    SHOULD_INDEX BOOLEAN DEFAULT TRUE,
-                    GENESIS_BACKFILL_COMPLETED BOOLEAN DEFAULT FALSE,
-                    LAST_PROCESSED_SIGNATURE VARCHAR(255) NULL,
-                    CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UPDATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );",
-            ),
-        ))
-        .await?;
+    let tree_addresses = match get_trees(SqlxPostgresConnector::from_sqlx_postgres_pool(
+        database_pool.clone(),
+    ))
+    .await
+    {
+        Ok(tree_addresses) => tree_addresses,
+        Err(e) => {
+            eprintln!("Error getting trees: {:?}", e);
+            return Err(e);
+        }
+    };
 
-    let pubsub_client = get_pubsub_client();
+    if tree_addresses.is_empty() {
+        eprintln!("No trees found. Exiting...");
+    }
 
-    let res = db_connection
+    let state = Arc::new(std::sync::Mutex::new(State {
+        tree_addresses,
+        tasks: vec![],
+    }));
+
+    let state_clone = Arc::clone(&state);
+
+    let (signal_tx, mut signal_rx) = tokio::sync::mpsc::channel(1);
+
+    // thread to handle SIGHUP
+    thread::spawn(move || {
+        let mut signals = Signals::new(&[SIGHUP]).unwrap();
+        for _ in signals.forever() {
+            let _ = signal_tx.blocking_send(());
+        }
+    });
+
+    let mut state = state_clone.lock().unwrap();
+    reload_tasks(&mut *state, database_pool.clone(), env_config);
+
+    loop {
+        tokio::select! {
+            _ = tokio::time::sleep(Duration::from_secs(1)) => {
+                // publish metrics
+            },
+            _ = signal_rx.recv() => {
+                println!("Received SIGHUP, reloading...");
+
+                let trees = get_trees(SqlxPostgresConnector::from_sqlx_postgres_pool(
+                    database_pool.clone(),
+                ))
+                .await
+                .unwrap();
+
+                state.tree_addresses = trees;
+
+                reload_tasks(
+                    &mut state,
+                    database_pool.clone(),
+                    setup_env_config(),
+                );
+            }
+        }
+    }
+}
+
+async fn handle_stream(
+    mut stream: Pin<Box<dyn Stream<Item = Response<RpcLogsResponse>> + Send + 'static>>,
+    sender: tokio::sync::mpsc::UnboundedSender<RpcLogsResponse>,
+) {
+    loop {
+        if let Some(logs) = stream.next().await {
+            if let Err(e) = sender.send(logs.value) {
+                eprintln!("Error sending logs to transaction processing: {:?}", e);
+            }
+        }
+    }
+}
+
+async fn get_trees(database_connection: DatabaseConnection) -> Result<Vec<String>> {
+    let res = database_connection
         .query_all(Statement::from_string(
             sea_orm::DatabaseBackend::Postgres,
-            String::from("SELECT * FROM ld_merkle_trees;"),
+            String::from("SELECT * FROM ld_merkle_trees WHERE should_index IS TRUE;"),
         ))
         .await;
 
@@ -79,7 +151,7 @@ async fn main() -> Result<()> {
     match res {
         Ok(rows) => {
             if rows.len() == 0 {
-                panic!("Trees to index not found in database");
+                panic!("Trees to index not found in the database");
             }
 
             rows.iter().for_each(|row| {
@@ -89,7 +161,7 @@ async fn main() -> Result<()> {
                         if let Ok(_) = Pubkey::from_str(s.as_str()) {
                             tree_addresses.push(s);
                         } else {
-                            println!("Invalid tree address {:?}", s)
+                            eprintln!("Invalid tree address {:?}", s)
                         }
                     }
                     None => {}
@@ -101,99 +173,117 @@ async fn main() -> Result<()> {
         }
     }
 
-    // let tree_addresses: Vec<String> = vec![
-    //     // "GXTXbFwcbNdWbiCWzZc3J2XGofopnhN9T98jnG29D2Yw".to_string(),
-    //     // "Aju7YfPdhjaqJbRdow48PqxcWutDDHWww6eoDC9PVY7m".to_string(),
-    //     // "43XAHmPkq8Yth3swdqrh5aZvWrmuci5ZhPVLptreaUZ1".to_string(),
-    //     // "EQQiiEceUo2uxHQgtRt8W92frLXwMUwdvt7P9Yo26cUM".to_string(),
-    //     // "CkSa2n2eyJvsPLA7ufVos94NAUTYuVhaxrvH2GS69f9j".to_string()
-    //     // "Dbx2uKULg44XeBR28tNWu2dU4bPpGfuYrd7RntgGXvuT".to_string(),
-    //     // "CkSa2n2eyJvsPLA7ufVos94NAUTYuVhaxrvH2GS69f9j".to_string(),
-    //     // "EBFsHQKYCn1obUr2FVNvGTkaUYf2p5jao2MVdbK5UNRH".to_string(),
-    //     // "14b9wzhVSaiUHB4t8tDY9QYNsGStT8ycaoLkBHZLZwax".to_string(),
-    //     // "6kAoPaZV4aB1rMPTPkbgycb9iNbHHibSzjhAvWEroMm".to_string(),
-    //     // "FmUjM4YBLK93WSb7AnbuYZy1h2kCcjZM8kHsi9ZU93TP".to_string(),
-    //     // "6JTnMcq9a6atrqmsz4rgTWp9EG5YPzxoobD7vg1csNt5".to_string(),
-    //     // "HVGMVJ7DyfXLU2H5AJSHvX2HkFrRrHQAoXAHfYUmicYr".to_string(),
-    //     // "D8yRakvsjWSR3ihANhwjP8RmNLg3A46EA1V1EbMLDT8B".to_string(),
-    //     "B1eWW3tTBb5DHrwVrqJximAYLwucGzvjuJWxkFAe4v2X".to_string(),
-    // ];
+    Ok(tree_addresses)
+}
 
-    println!("TREE ADDRESSES {:?}", tree_addresses);
+fn reload_tasks(state: &mut State, database_pool: Pool<Postgres>, env_config: EnvConfig) {
+    state.tasks.retain(|(s, handle)| {
+        if !state.tree_addresses.contains(s) {
+            handle.abort();
+            false
+        } else {
+            true
+        }
+    });
 
-    let mut stream = select_all(
-        join_all(tree_addresses.iter().map(|address| {
-            pubsub_client.logs_subscribe(
-                RpcTransactionLogsFilter::Mentions(vec![address.to_string()]),
-                RpcTransactionLogsConfig {
-                    commitment: Some(CommitmentConfig::processed()),
-                },
-            )
-        }))
-        .await
-        .into_iter()
-        .flat_map(|result| match result {
-            Ok(subscription) => Some(subscription.0),
-            Err(e) => {
-                eprintln!("error creating subscription: {e}");
-                None
-            }
+    let context = BubblegumBackfillContext::new(
+        database_pool.clone(),
+        Rpc::from_config(&SolanaRpcArgs {
+            solana_rpc_url: env_config.get_rpc_url().to_string(),
         }),
     );
 
-    let handle = task::spawn(handle_stream(stream));
+    let tree_addresses = state.tree_addresses.clone();
 
-    task::spawn(handle_metadata_downloads(database_pool.clone()));
+    for address in tree_addresses {
+        let address_clone = address.clone();
 
-    // join_all(tree_addresses.into_iter().map(|tr| {
-    //     let db_connection_1 = SqlxPostgresConnector::from_sqlx_postgres_pool(database_pool.clone());
-    //     let db_connection_2 = SqlxPostgresConnector::from_sqlx_postgres_pool(database_pool.clone());
+        let program_transformer = ProgramTransformer::new(
+            database_pool.clone(),
+            Box::new(|_info| futures::future::ready(Ok(())).boxed()),
+            false,
+        );
 
-    //     let backfill_future = backfill_tree(tr.clone(), db_connection_1);
+        let context = context.clone();
 
-    //     async move {
-    //         let _ = backfill_future.await;
+        let args = BubblegumBackfillArgs {
+            only_trees: Some(vec![address.clone().to_string()]),
+            tree_crawler_count: 4,
+            tree_worker: das_bubblegum_backfill::worker::TreeWorkerArgs {
+                metadata_json_download_worker: MetadataJsonDownloadWorkerArgs {
+                    metadata_json_download_worker_count: 100,
+                    metadata_json_download_worker_request_timeout: 200,
+                },
+                signature_worker: SignatureWorkerArgs {
+                    signature_channel_size: 100,
+                    signature_worker_count: 100,
+                },
+                gap_worker: GapWorkerArgs {
+                    gap_channel_size: 100,
+                    gap_worker_count: 100,
+                },
+                program_transformer_worker: ProgramTransformerWorkerArgs {
+                    program_transformer_channel_size: 100,
+                },
+            },
+        };
 
-    //         let _ = db_connection_2
-    //             .execute(Statement::from_sql_and_values(
-    //                 sea_orm::DatabaseBackend::Postgres,
-    //                 "UPDATE ld_merkle_trees SET genesis_backfill_completed=$1 WHERE address=$2;",
-    //                 vec![
-    //                     sea_orm::Value::from(true),
-    //                     sea_orm::Value::from(tr.as_str()),
-    //                 ],
-    //             ))
-    //             .await;
-    //     }
-    // }))
-    // .await;
+        let task_handle = task::spawn(async move {
+            let address = address.clone();
+            let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<RpcLogsResponse>();
 
-    // tasks spawned to process transactions from queue. depending on your tree and queue sizes, adjust this
-    futures::future::join_all(
-        iter::repeat_with(|| process_transactions_queue(database_pool.clone()))
-            .take(15)
-            .collect::<Vec<_>>(),
-    )
-    .await;
+            let stream: Pin<Box<dyn Stream<Item = Response<RpcLogsResponse>> + Send>> =
+                get_pubsub_client()
+                    .logs_subscribe(
+                        RpcTransactionLogsFilter::Mentions(vec![address.clone().to_string()]),
+                        RpcTransactionLogsConfig {
+                            commitment: Some(CommitmentConfig::processed()),
+                        },
+                    )
+                    .await
+                    .unwrap()
+                    .0;
 
-    Ok(())
-}
+            task::spawn(async move {
+                handle_stream(stream, tx).await;
+            });
 
-async fn handle_stream(
-    mut stream: SelectAll<Pin<Box<dyn Stream<Item = Response<RpcLogsResponse>> + Send>>>,
-) {
-    loop {
-        if let Some(logs) = stream.next().await {
-            process_logs(logs.value).await;
-        }
+            println!("Backfill started for tree: {:}", address);
+
+            if let Err(e) = start_bubblegum_backfill(context.clone(), args).await {
+                eprintln!("Error backfilling tree {:?}: {:?}", address.clone(), e);
+            }
+
+            println!("Backfill finished and for tree: {:}", address);
+            println!("Starting live indexing for tree: {:}", address);
+
+            process_transactions_channel(rx, &program_transformer).await;
+        });
+
+        state.tasks.push((address_clone, task_handle));
     }
 }
 
-async fn handle_metadata_downloads(pool: PgPool) {
-    let connection = SqlxPostgresConnector::from_sqlx_postgres_pool(pool);
-    loop {
-        let _ = fetch_store_metadata(&connection).await;
-        println!("No metadata to update, sleeping for 5 secs");
-        sleep(Duration::from_secs(5)).await;
-    }
+async fn configure_database(
+    database_connection: DatabaseConnection,
+) -> Result<sea_orm::ExecResult, sea_orm::DbErr> {
+    // Refer https://github.com/WilfredAlmeida/LightDAS/issues/4 to understand why this is needed
+    database_connection
+        .execute(Statement::from_string(
+            sea_orm::DatabaseBackend::Postgres,
+            String::from(
+                "CREATE TABLE IF NOT EXISTS LD_MERKLE_TREES (
+                    ADDRESS VARCHAR(255),
+                    TAG VARCHAR(255) NULL,
+                    CAPACITY INT NULL,
+                    MAX_DEPTH INT NULL,
+                    CANOPY_DEPTH INT NULL,
+                    MAX_BUFFER_SIZE INT NULL,
+                    SHOULD_INDEX BOOLEAN DEFAULT TRUE,
+                    CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UPDATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );",
+            ),
+        ))
+        .await
 }

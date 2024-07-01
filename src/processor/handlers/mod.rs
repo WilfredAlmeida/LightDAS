@@ -1,1 +1,0 @@
-pub mod mint_to_collection_v1;

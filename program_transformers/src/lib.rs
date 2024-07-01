@@ -2,6 +2,7 @@ use {
     crate::{
         bubblegum::handle_bubblegum_instruction,
         error::{ProgramTransformerError, ProgramTransformerResult},
+        mpl_core_program::handle_mpl_core_account,
         token::handle_token_program_account,
         token_metadata::handle_token_metadata_account,
     },
@@ -9,68 +10,47 @@ use {
         instruction::{order_instructions, InstructionBundle, IxPair},
         program_handler::ProgramParser,
         programs::{
-            bubblegum::BubblegumParser, token_account::TokenAccountParser,
-            token_metadata::TokenMetadataParser, ProgramParseResult,
+            bubblegum::BubblegumParser, mpl_core_program::MplCoreParser,
+            token_account::TokenAccountParser, token_metadata::TokenMetadataParser,
+            ProgramParseResult,
         },
     },
-    futures::future::BoxFuture,
-    sea_orm::{DatabaseConnection, SqlxPostgresConnector},
+    das_core::{DownloadMetadataInfo, DownloadMetadataNotifier},
+    sea_orm::{
+        entity::EntityTrait, query::Select, ConnectionTrait, DatabaseConnection, DbErr,
+        SqlxPostgresConnector, TransactionTrait,
+    },
     solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey, signature::Signature},
     solana_transaction_status::InnerInstructions,
     sqlx::PgPool,
     std::collections::{HashMap, HashSet, VecDeque},
+    tokio::time::{sleep, Duration},
     tracing::{debug, error, info},
 };
 
 mod asset_upserts;
 mod bubblegum;
 pub mod error;
+mod mpl_core_program;
 mod token;
 mod token_metadata;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct AccountInfo<'a> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AccountInfo {
     pub slot: u64,
-    pub pubkey: &'a Pubkey,
-    pub owner: &'a Pubkey,
-    pub data: &'a [u8],
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TransactionInfo<'a> {
-    pub slot: u64,
-    pub signature: &'a Signature,
-    pub account_keys: &'a [Pubkey],
-    pub message_instructions: &'a [CompiledInstruction],
-    pub meta_inner_instructions: &'a [InnerInstructions],
+    pub pubkey: Pubkey,
+    pub owner: Pubkey,
+    pub data: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DownloadMetadataInfo {
-    asset_data_id: Vec<u8>,
-    uri: String,
+pub struct TransactionInfo {
+    pub slot: u64,
+    pub signature: Signature,
+    pub account_keys: Vec<Pubkey>,
+    pub message_instructions: Vec<CompiledInstruction>,
+    pub meta_inner_instructions: Vec<InnerInstructions>,
 }
-
-impl DownloadMetadataInfo {
-    pub fn new(asset_data_id: Vec<u8>, uri: String) -> Self {
-        Self {
-            asset_data_id,
-            uri: uri.trim().replace('\0', ""),
-        }
-    }
-
-    pub fn into_inner(self) -> (Vec<u8>, String) {
-        (self.asset_data_id, self.uri)
-    }
-}
-
-pub type DownloadMetadataNotifier = Box<
-    dyn Fn(
-            DownloadMetadataInfo,
-        ) -> BoxFuture<'static, Result<(), Box<dyn std::error::Error + Send + Sync>>>
-        + Sync
-        + Send,
->;
 
 pub struct ProgramTransformer {
     storage: DatabaseConnection,
@@ -90,9 +70,11 @@ impl ProgramTransformer {
         let bgum = BubblegumParser {};
         let token_metadata = TokenMetadataParser {};
         let token = TokenAccountParser {};
+        let mpl_core = MplCoreParser {};
         parsers.insert(bgum.key(), Box::new(bgum));
         parsers.insert(token_metadata.key(), Box::new(token_metadata));
         parsers.insert(token.key(), Box::new(token));
+        parsers.insert(mpl_core.key(), Box::new(mpl_core));
         let hs = parsers.iter().fold(HashSet::new(), |mut acc, (k, _)| {
             acc.insert(*k);
             acc
@@ -109,13 +91,13 @@ impl ProgramTransformer {
 
     pub fn break_transaction<'a>(
         &self,
-        tx_info: &'a TransactionInfo<'_>,
+        tx_info: &'a TransactionInfo,
     ) -> VecDeque<(IxPair<'a>, Option<Vec<IxPair<'a>>>)> {
         order_instructions(
             &self.key_set,
-            tx_info.account_keys,
-            tx_info.message_instructions,
-            tx_info.meta_inner_instructions,
+            tx_info.account_keys.as_slice(),
+            tx_info.message_instructions.as_slice(),
+            tx_info.meta_inner_instructions.as_slice(),
         )
     }
 
@@ -126,9 +108,9 @@ impl ProgramTransformer {
 
     pub async fn handle_transaction(
         &self,
-        tx_info: &TransactionInfo<'_>,
+        tx_info: &TransactionInfo,
     ) -> ProgramTransformerResult<()> {
-        info!("Handling Transaction: {:?}", tx_info.signature);
+        println!("Handling Transaction: {:?}", tx_info.signature);
         let instructions = self.break_transaction(tx_info);
         let mut not_impl = 0;
         let ixlen = instructions.len();
@@ -204,10 +186,10 @@ impl ProgramTransformer {
 
     pub async fn handle_account_update(
         &self,
-        account_info: &AccountInfo<'_>,
+        account_info: &AccountInfo,
     ) -> ProgramTransformerResult<()> {
-        if let Some(program) = self.match_program(account_info.owner) {
-            let result = program.handle_account(account_info.data)?;
+        if let Some(program) = self.match_program(&account_info.owner) {
+            let result = program.handle_account(&account_info.data)?;
             match result.result_type() {
                 ProgramParseResult::TokenMetadata(parsing_result) => {
                     handle_token_metadata_account(
@@ -227,9 +209,51 @@ impl ProgramTransformer {
                     )
                     .await
                 }
+                ProgramParseResult::MplCore(parsing_result) => {
+                    handle_mpl_core_account(
+                        account_info,
+                        parsing_result,
+                        &self.storage,
+                        &self.download_metadata_notifier,
+                    )
+                    .await
+                }
                 _ => Err(ProgramTransformerError::NotImplemented),
             }?;
         }
         Ok(())
+    }
+}
+
+pub async fn find_model_with_retry<T: ConnectionTrait + TransactionTrait, K: EntityTrait>(
+    conn: &T,
+    model_name: &str,
+    select: &Select<K>,
+    retry_intervals: &[u64],
+) -> Result<Option<K::Model>, DbErr> {
+    let mut retries = 0;
+    let metric_name = format!("{}_found", model_name);
+
+    for interval in retry_intervals {
+        let interval_duration = Duration::from_millis(*interval);
+        sleep(interval_duration).await;
+
+        let model = select.clone().one(conn).await?;
+        if let Some(m) = model {
+            record_metric(&metric_name, true, retries);
+            return Ok(Some(m));
+        }
+        retries += 1;
+    }
+
+    record_metric(&metric_name, false, retries - 1);
+    Ok(None)
+}
+
+fn record_metric(metric_name: &str, success: bool, retries: u32) {
+    let retry_count = &retries.to_string();
+    let success = if success { "true" } else { "false" };
+    if cadence_macros::is_global_default_set() {
+        cadence_macros::statsd_count!(metric_name, 1, "success" => success, "retry_count" => retry_count);
     }
 }

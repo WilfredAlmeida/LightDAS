@@ -59,7 +59,7 @@ where
         InstructionName::SetDecompressibleState => "SetDecompressibleState",
         InstructionName::UpdateMetadata => "UpdateMetadata",
     };
-    info!("BGUM instruction txn={:?}: {:?}", ix_str, bundle.txn_id);
+    println!("BGUM instruction txn={:?}: {:?}", ix_str, bundle.txn_id);
 
     match ix_type {
         InstructionName::Transfer => {

@@ -7,12 +7,15 @@ edition = "2021"
 members = [
     "migration",
     "digital_asset_types",
-    "program_transformers"
+    "program_transformers",
+    "blockbuster",
+    "core",
+    "bubblegum-backfill"
 ]
 
 [dependencies]
+anchor-lang = {workspace=true}
 anyhow = {workspace=true}
-blockbuster = {workspace=true}
 digital_asset_types = { workspace = true, features = ["json_types", "sql_types"] }
 dotenv = {workspace=true}
 futures = {workspace=true}
@@ -45,9 +48,34 @@ serde_json = {workspace=true}
 spl-concurrent-merkle-tree = {workspace=true}
 thiserror = {workspace=true}
 url = {workspace=true}
-base64 = "0.22.0"
-reqwest = "0.11.24"
-
+das-core = {workspace=true}
+heck = {workspace=true}
+backon = {workspace=true}
+clap = {workspace=true}
+derive_more = {workspace=true}
+figment = {workspace=true}
+indicatif = {workspace=true}
+plerkle_messenger = {workspace=true}
+reqwest = {workspace=true}
+solana-account-decoder = {workspace=true}
+bytemuck = {workspace=true}
+mpl-core = {workspace=true}
+mpl-token-metadata = {workspace=true}
+solana-zk-token-sdk = {workspace=true}
+spl-noop = {workspace=true}
+spl-pod = {workspace=true}
+anchor-client = {workspace=true}
+spl-token-2022  = {workspace=true}
+spl-token-group-interface  = {workspace=true}
+das-bubblegum-backfill = {workspace=true}
+spl-token-metadata-interface = {workspace=true}
+flatbuffers = {workspace=true}
+rand = {workspace=true}
+solana-geyser-plugin-interface = {workspace=true}
+solana-program = {workspace=true}
+blockbuster = {workspace=true}
+signal-hook = {workspace=true}
+base64 = {workspace=true}
 
 
 [[bin]]
@@ -61,25 +89,26 @@ repository = "https://github.com/WilfredAlmeida/LightDAS"
 version = "0.1.0"
 
 [workspace.dependencies]
-anyhow = "1.0.79"
-blockbuster = {git="https://github.com/rpcpool/blockbuster", branch="rm-plerkle-101"}
-cadence = "0.29.0"
-cadence-macros = "0.29.0"
+anyhow = "1.0.86"
+base64 = "0.22.1"
+blockbuster = { path = "blockbuster" }
+cadence = "0.29.1"
+cadence-macros = "0.29.1"
 dotenv = "0.15.0"
 digital_asset_types = { path = "digital_asset_types" }
-futures = "0.3.28"
-lazy_static = "1.4.0"
-mpl-bubblegum = "1.2.0"
-plerkle_serialization = "1.6.0"
-sea-orm = { version = "0.10.6", features = ["macros", "runtime-tokio-rustls", "sqlx-postgres", "with-chrono", "mock"] }
-solana-client = "1.16.2"
-solana-rpc-client-api = "1.16.2"
-solana-sdk = "1.16.27"
-solana-transaction-status = "1.16.2"
-sqlx = "0.6.2"
-tokio = "1.30.0"
-log = "0.4.17"
-async-trait = "0.1.60"
+futures = "0.3.30"
+lazy_static = "1.5.0"
+mpl-bubblegum = "1.4.0"
+plerkle_serialization = "1.8.0"
+sea-orm = { version = "0.10.7", features = ["macros", "runtime-tokio-rustls", "sqlx-postgres", "with-chrono", "mock"] }
+solana-client = "~1.17"
+solana-rpc-client-api = "~1.17"
+solana-sdk = "~1.17"
+solana-transaction-status = "~1.17"
+sqlx = "0.6.3"
+tokio = "1.38.0"
+log = "0.4.22"
+async-trait = "0.1.80"
 borsh = "~0.10.3"
 borsh-derive = "~0.10.3"
 bs58 = "0.4.0"
@@ -87,19 +116,49 @@ indexmap = "1.9.3"
 jsonpath_lib = "0.3.0"
 mime_guess = "2.0.4"
 num-derive = "0.3.3"
-num-traits = "0.2.15"
+num-traits = "0.2.19"
 program_transformers = { path = "program_transformers" }
-schemars = "0.8.6"
-schemars_derive = "0.8.6"
-sea-query = "0.28.1"
-serde = "1.0.137"
-serde_json = "1.0.81"
+das-bubblegum-backfill = { path = "bubblegum-backfill" }
+das-core = { path = "core" }
+schemars = "0.8.21"
+schemars_derive = "0.8.21"
+sea-query = "0.28.5"
+serde = "1.0.203"
+serde_json = "1.0.118"
 spl-concurrent-merkle-tree = "0.2.0"
-spl-account-compression = "0.2.0"
+spl-account-compression = "0.3.0"
 spl-token = ">= 3.5.0, < 5.0"
-thiserror = "1.0.31"
-tracing = "0.1.35"
-url = "2.3.1"
+thiserror = "1.0.61"
+tracing = "0.1.40"
+url = "2.5.2"
+heck = "0.5.0"
+backon = "0.4.4"
+clap = "4.5.7"
+derive_more = { version = "0.99.18" }
+figment = "0.10.19"
+indicatif = "0.17.8"
+plerkle_messenger = "1.8.0"
+reqwest = "0.11.27"
+signal-hook = "0.3.17"
+solana-account-decoder = "~1.17"
+bytemuck = { version = "1.16.1", features = ["derive"] }
+mpl-core = { version = "0.7.1", features = ["serde"] }
+mpl-token-metadata = "4.1.2"
+solana-zk-token-sdk = "~1.17"
+spl-noop = "0.2.0"
+spl-pod = { version = "0.1.0", features = ["serde-traits"] }
+
+
+spl-token-metadata-interface = "0.2.0"
+flatbuffers = "23.5.26"
+rand = "0.8.5"
+solana-geyser-plugin-interface = "~1.17"
+solana-program = "~1.17"
+anchor-client = "0.29.0"
+anchor-lang = "0.29.0"
+spl-token-2022 = { version = "1.0", features = ["no-entrypoint"] }
+spl-token-group-interface = "0.1.0"
+
 
 [workspace.lints.clippy]
 clone_on_ref_ptr = "deny"

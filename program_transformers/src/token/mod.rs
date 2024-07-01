@@ -19,10 +19,10 @@ use {
     spl_token::state::AccountState,
 };
 
-pub async fn handle_token_program_account<'a, 'b, 'c>(
-    account_info: &'a AccountInfo<'a>,
-    parsing_result: &'b TokenProgramAccount,
-    db: &'c DatabaseConnection,
+pub async fn handle_token_program_account<'a, 'b>(
+    account_info: &AccountInfo,
+    parsing_result: &'a TokenProgramAccount,
+    db: &'b DatabaseConnection,
     _download_metadata_notifier: &DownloadMetadataNotifier,
 ) -> ProgramTransformerResult<()> {
     let account_key = account_info.pubkey.to_bytes().to_vec();
@@ -154,7 +154,7 @@ pub async fn handle_token_program_account<'a, 'b, 'c>(
                 upsert_assets_mint_account_columns(
                     AssetMintAccountColumns {
                         mint: account_key.clone(),
-                        suppply_mint: Some(account_key),
+                        supply_mint: Some(account_key),
                         supply: m.supply,
                         slot_updated_mint_account: account_info.slot,
                     },

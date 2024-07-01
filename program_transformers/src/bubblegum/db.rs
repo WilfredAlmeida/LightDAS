@@ -151,7 +151,7 @@ where
         // sequence number.  So in this case we set at flag to force checking the tree.
         let force_chk = rows.is_empty() && change_log_event.seq > 1;
 
-        info!("Adding to backfill_items table at level {}", i - 1);
+        println!("Adding to backfill_items table at level {}", i - 1);
         let item = backfill_items::ActiveModel {
             tree: ActiveValue::Set(tree_id.to_vec()),
             seq: ActiveValue::Set(change_log_event.seq as i64),

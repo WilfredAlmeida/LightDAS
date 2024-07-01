@@ -42,9 +42,9 @@ pub async fn process_transaction(
     let res = program_transformer
         .handle_transaction(&TransactionInfo {
             slot: transaction.slot,
-            signature: &unwrapped_transaction.signatures[0],
-            account_keys: &account_keys,
-            message_instructions: &message.instructions(),
+            signature: unwrapped_transaction.signatures[0],
+            account_keys: account_keys,
+            message_instructions: message.instructions().into(),
             meta_inner_instructions: inner_instructions
                 .unwrap_or_default()
                 .into_iter()
@@ -66,16 +66,14 @@ pub async fn process_transaction(
                         })
                         .collect(),
                 })
-                .collect::<Vec<_>>()
-                .as_slice(),
+                .collect::<Vec<_>>(),
         })
         .await;
 
     if let Err(e) = res {
-        println!("TX HANDLING ERROR: {:?}", e);
+        eprintln!("tx handling error: {:?}", e);
         return Ok(());
     }
 
-    println!("HANDLED TX");
     Ok(())
 }
