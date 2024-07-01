@@ -12,7 +12,6 @@ pub async fn get_asset(
     options: &Options,
 ) -> Result<Asset, DbErr> {
     let asset = scopes::asset::get_by_id(db, id, false).await?;
-    print!("ASSET: {:?}", asset.clone());
     asset_to_rpc(asset, options)
 }
 

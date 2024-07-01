@@ -6,7 +6,7 @@ use {
             AssetMintAccountColumns, AssetTokenAccountColumns,
         },
         error::{ProgramTransformerError, ProgramTransformerResult},
-        DownloadMetadataInfo,
+        find_model_with_retry, DownloadMetadataInfo,
     },
     blockbuster::token_metadata::{
         accounts::{MasterEdition, Metadata},
@@ -26,12 +26,11 @@ use {
     },
     sea_orm::{
         entity::{ActiveValue, ColumnTrait, EntityTrait},
-        query::{JsonValue, Order, QueryFilter, QueryOrder, QueryTrait, Select},
+        query::{JsonValue, Order, QueryFilter, QueryOrder, QueryTrait},
         sea_query::query::OnConflict,
         ConnectionTrait, DbBackend, DbErr, TransactionTrait,
     },
     solana_sdk::{pubkey, pubkey::Pubkey},
-    tokio::time::{sleep, Duration},
     tracing::warn,
 };
 
@@ -40,7 +39,7 @@ pub async fn burn_v1_asset<T: ConnectionTrait + TransactionTrait>(
     id: Pubkey,
     slot: u64,
 ) -> ProgramTransformerResult<()> {
-    let (id, slot_i) = (id, slot as i64);
+    let slot_i = slot as i64;
     let model = asset::ActiveModel {
         id: ActiveValue::Set(id.to_bytes().to_vec()),
         slot_updated: ActiveValue::Set(Some(slot_i)),
@@ -84,7 +83,7 @@ pub async fn index_and_fetch_mint_data<T: ConnectionTrait + TransactionTrait>(
         upsert_assets_mint_account_columns(
             AssetMintAccountColumns {
                 mint: mint_pubkey_vec.clone(),
-                suppply_mint: Some(token.mint.clone()),
+                supply_mint: Some(token.mint.clone()),
                 supply: token.supply as u64,
                 slot_updated_mint_account: token.slot_updated as u64,
             },
@@ -269,6 +268,13 @@ pub async fn save_v1_asset<T: ConnectionTrait + TransactionTrait>(
             royalty_amount: metadata.seller_fee_basis_points as i32,
             asset_data: Some(mint_pubkey_vec.clone()),
             slot_updated_metadata_account: slot_i as u64,
+            mpl_core_plugins: None,
+            mpl_core_unknown_plugins: None,
+            mpl_core_collection_num_minted: None,
+            mpl_core_collection_current_size: None,
+            mpl_core_plugins_json_version: None,
+            mpl_core_external_plugins: None,
+            mpl_core_unknown_external_plugins: None,
         },
         &txn,
     )
@@ -404,37 +410,4 @@ pub async fn save_v1_asset<T: ConnectionTrait + TransactionTrait>(
     }
 
     Ok(Some(DownloadMetadataInfo::new(mint_pubkey_vec, uri)))
-}
-
-async fn find_model_with_retry<T: ConnectionTrait + TransactionTrait, K: EntityTrait>(
-    conn: &T,
-    model_name: &str,
-    select: &Select<K>,
-    retry_intervals: &[u64],
-) -> Result<Option<K::Model>, DbErr> {
-    let mut retries = 0;
-    let metric_name = format!("{}_found", model_name);
-
-    for interval in retry_intervals {
-        let interval_duration = Duration::from_millis(*interval);
-        sleep(interval_duration).await;
-
-        let model = select.clone().one(conn).await?;
-        if let Some(m) = model {
-            record_metric(&metric_name, true, retries);
-            return Ok(Some(m));
-        }
-        retries += 1;
-    }
-
-    record_metric(&metric_name, false, retries - 1);
-    Ok(None)
-}
-
-fn record_metric(metric_name: &str, success: bool, retries: u32) {
-    let retry_count = &retries.to_string();
-    let success = if success { "true" } else { "false" };
-    if cadence_macros::is_global_default_set() {
-        cadence_macros::statsd_count!(metric_name, 1, "success" => success, "retry_count" => retry_count);
-    }
 }

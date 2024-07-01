@@ -1,5 +1,3 @@
-use std::env;
-
 use crate::config::env_config::EnvConfig;
 use solana_client::nonblocking::pubsub_client::PubsubClient;
 use solana_client::nonblocking::rpc_client::RpcClient;

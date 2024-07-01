@@ -103,6 +103,13 @@ impl Default for asset::Model {
             owner_delegate_seq: None,
             leaf_seq: None,
             base_info_seq: None,
+            mpl_core_plugins: None,
+            mpl_core_unknown_plugins: None,
+            mpl_core_collection_current_size: None,
+            mpl_core_collection_num_minted: None,
+            mpl_core_plugins_json_version: None,
+            mpl_core_external_plugins: None,
+            mpl_core_unknown_external_plugins: None,
         }
     }
 }

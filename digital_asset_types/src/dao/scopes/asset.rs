@@ -391,18 +391,11 @@ pub async fn get_by_id(
     if !include_no_supply {
         asset_data = asset_data.filter(Condition::all().add(asset::Column::Supply.gt(0)));
     }
-    println!("ASSET DATA 1: {:?}", asset_data.clone());
-    println!(
-        "ASSET DATA await: {:?}",
-        asset_data.clone().one(conn.clone()).await
-    );
     let asset_data: (asset::Model, asset_data::Model) =
         asset_data.one(conn).await.and_then(|o| match o {
             Some((a, Some(d))) => Ok((a, d)),
             _ => Err(DbErr::RecordNotFound("Asset Not Found".to_string())),
         })?;
-
-    println!("ASSET DATA 2: {:?}", asset_data.clone());
 
     let (asset, data) = asset_data;
     let authorities: Vec<asset_authority::Model> = asset_authority::Entity::find()
