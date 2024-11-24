@@ -2,9 +2,6 @@ use {
     crate::{
         bubblegum::handle_bubblegum_instruction,
         error::{ProgramTransformerError, ProgramTransformerResult},
-        mpl_core_program::handle_mpl_core_account,
-        token::handle_token_program_account,
-        token_metadata::handle_token_metadata_account,
     },
     blockbuster::{
         instruction::{order_instructions, InstructionBundle, IxPair},
@@ -20,6 +17,7 @@ use {
         entity::EntityTrait, query::Select, ConnectionTrait, DatabaseConnection, DbErr,
         SqlxPostgresConnector, TransactionTrait,
     },
+    serde::Deserialize,
     solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey, signature::Signature},
     solana_transaction_status::InnerInstructions,
     sqlx::PgPool,
@@ -29,13 +27,10 @@ use {
 };
 
 mod asset_upserts;
-mod bubblegum;
+pub mod bubblegum;
 pub mod error;
-mod mpl_core_program;
-mod token;
-mod token_metadata;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct AccountInfo {
     pub slot: u64,
     pub pubkey: Pubkey,
@@ -43,7 +38,7 @@ pub struct AccountInfo {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct TransactionInfo {
     pub slot: u64,
     pub signature: Signature,
@@ -57,15 +52,10 @@ pub struct ProgramTransformer {
     download_metadata_notifier: DownloadMetadataNotifier,
     parsers: HashMap<Pubkey, Box<dyn ProgramParser>>,
     key_set: HashSet<Pubkey>,
-    cl_audits: bool,
 }
 
 impl ProgramTransformer {
-    pub fn new(
-        pool: PgPool,
-        download_metadata_notifier: DownloadMetadataNotifier,
-        cl_audits: bool,
-    ) -> Self {
+    pub fn new(pool: PgPool, download_metadata_notifier: DownloadMetadataNotifier) -> Self {
         let mut parsers: HashMap<Pubkey, Box<dyn ProgramParser>> = HashMap::with_capacity(3);
         let bgum = BubblegumParser {};
         let token_metadata = TokenMetadataParser {};
@@ -85,7 +75,6 @@ impl ProgramTransformer {
             download_metadata_notifier,
             parsers,
             key_set: hs,
-            cl_audits,
         }
     }
 
@@ -110,7 +99,7 @@ impl ProgramTransformer {
         &self,
         tx_info: &TransactionInfo,
     ) -> ProgramTransformerResult<()> {
-        println!("Handling Transaction: {:?}", tx_info.signature);
+        info!("Handling Transaction: {:?}", tx_info.signature);
         let instructions = self.break_transaction(tx_info);
         let mut not_impl = 0;
         let ixlen = instructions.len();
@@ -159,7 +148,6 @@ impl ProgramTransformer {
                             &ix,
                             &self.storage,
                             &self.download_metadata_notifier,
-                            self.cl_audits,
                         )
                         .await
                         .map_err(|err| {
@@ -178,7 +166,10 @@ impl ProgramTransformer {
         }
 
         if not_impl == ixlen {
-            debug!("Not imple");
+            debug!(
+                "Not implemented for transaction signature: {:?}",
+                tx_info.signature
+            );
             return Err(ProgramTransformerError::NotImplemented);
         }
         Ok(())
@@ -191,33 +182,6 @@ impl ProgramTransformer {
         if let Some(program) = self.match_program(&account_info.owner) {
             let result = program.handle_account(&account_info.data)?;
             match result.result_type() {
-                ProgramParseResult::TokenMetadata(parsing_result) => {
-                    handle_token_metadata_account(
-                        account_info,
-                        parsing_result,
-                        &self.storage,
-                        &self.download_metadata_notifier,
-                    )
-                    .await
-                }
-                ProgramParseResult::TokenProgramAccount(parsing_result) => {
-                    handle_token_program_account(
-                        account_info,
-                        parsing_result,
-                        &self.storage,
-                        &self.download_metadata_notifier,
-                    )
-                    .await
-                }
-                ProgramParseResult::MplCore(parsing_result) => {
-                    handle_mpl_core_account(
-                        account_info,
-                        parsing_result,
-                        &self.storage,
-                        &self.download_metadata_notifier,
-                    )
-                    .await
-                }
                 _ => Err(ProgramTransformerError::NotImplemented),
             }?;
         }
