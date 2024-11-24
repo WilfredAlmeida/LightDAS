@@ -10,7 +10,7 @@ members = [
     "program_transformers",
     "blockbuster",
     "core",
-    "bubblegum-backfill"
+    "bubblegum"
 ]
 
 [dependencies]
@@ -61,13 +61,14 @@ solana-account-decoder = {workspace=true}
 bytemuck = {workspace=true}
 mpl-core = {workspace=true}
 mpl-token-metadata = {workspace=true}
+sha3 = { workspace = true }
 solana-zk-token-sdk = {workspace=true}
 spl-noop = {workspace=true}
 spl-pod = {workspace=true}
 anchor-client = {workspace=true}
 spl-token-2022  = {workspace=true}
 spl-token-group-interface  = {workspace=true}
-das-bubblegum-backfill = {workspace=true}
+das-bubblegum = {workspace=true}
 spl-token-metadata-interface = {workspace=true}
 flatbuffers = {workspace=true}
 rand = {workspace=true}
@@ -76,6 +77,7 @@ solana-program = {workspace=true}
 blockbuster = {workspace=true}
 signal-hook = {workspace=true}
 base64 = {workspace=true}
+spl-account-compression = {workspace = true}
 
 
 [[bin]]
@@ -118,7 +120,7 @@ mime_guess = "2.0.4"
 num-derive = "0.3.3"
 num-traits = "0.2.19"
 program_transformers = { path = "program_transformers" }
-das-bubblegum-backfill = { path = "bubblegum-backfill" }
+das-bubblegum = { path = "bubblegum" }
 das-core = { path = "core" }
 schemars = "0.8.21"
 schemars_derive = "0.8.21"
@@ -126,7 +128,7 @@ sea-query = "0.28.5"
 serde = "1.0.203"
 serde_json = "1.0.118"
 spl-concurrent-merkle-tree = "0.2.0"
-spl-account-compression = "0.3.0"
+spl-account-compression = "0.4.2"
 spl-token = ">= 3.5.0, < 5.0"
 thiserror = "1.0.61"
 tracing = "0.1.40"
@@ -144,11 +146,10 @@ solana-account-decoder = "~1.17"
 bytemuck = { version = "1.16.1", features = ["derive"] }
 mpl-core = { version = "0.7.1", features = ["serde"] }
 mpl-token-metadata = "4.1.2"
+sha3 = "0.10.8"
 solana-zk-token-sdk = "~1.17"
 spl-noop = "0.2.0"
 spl-pod = { version = "0.1.0", features = ["serde-traits"] }
-
-
 spl-token-metadata-interface = "0.2.0"
 flatbuffers = "23.5.26"
 rand = "0.8.5"

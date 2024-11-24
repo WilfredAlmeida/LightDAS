@@ -1,7 +1,7 @@
-mod gap;
-mod program_transformer;
-mod transaction;
-mod tree;
+pub mod gap;
+pub mod program_transformer;
+pub mod transaction;
+pub mod tree;
 
 pub use gap::GapWorkerArgs;
 pub use program_transformer::ProgramTransformerWorkerArgs;

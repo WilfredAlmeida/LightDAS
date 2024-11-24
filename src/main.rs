@@ -9,12 +9,14 @@ use crate::config::database::setup_database_config;
 use crate::config::env_config::{setup_env_config, EnvConfig};
 use anyhow::Result;
 use config::rpc_config::{get_pubsub_client, setup_rpc_clients};
-use das_bubblegum_backfill::worker::{
-    GapWorkerArgs, ProgramTransformerWorkerArgs, SignatureWorkerArgs,
+use das_bubblegum::backfill::worker::{
+    GapWorkerArgs, ProgramTransformerWorkerArgs, SignatureWorkerArgs, TreeWorkerArgs,
 };
-use das_bubblegum_backfill::{
-    start_bubblegum_backfill, BubblegumBackfillArgs, BubblegumBackfillContext,
-};
+use das_bubblegum::{start_backfill, BubblegumContext};
+
+// use das_bubblegum::{
+//     start_backfill, BackfillArgs, BackfillContext,
+// };
 use das_core::{MetadataJsonDownloadWorkerArgs, Rpc, SolanaRpcArgs};
 use dotenv::dotenv;
 
@@ -186,7 +188,7 @@ fn reload_tasks(state: &mut State, database_pool: Pool<Postgres>, env_config: En
         }
     });
 
-    let context = BubblegumBackfillContext::new(
+    let context = BubblegumContext::new(
         database_pool.clone(),
         Rpc::from_config(&SolanaRpcArgs {
             solana_rpc_url: env_config.get_rpc_url().to_string(),
@@ -201,15 +203,14 @@ fn reload_tasks(state: &mut State, database_pool: Pool<Postgres>, env_config: En
         let program_transformer = ProgramTransformer::new(
             database_pool.clone(),
             Box::new(|_info| futures::future::ready(Ok(())).boxed()),
-            false,
         );
 
         let context = context.clone();
 
-        let args = BubblegumBackfillArgs {
+        let args = das_bubblegum::BackfillArgs {
             only_trees: Some(vec![address.clone().to_string()]),
             tree_crawler_count: 4,
-            tree_worker: das_bubblegum_backfill::worker::TreeWorkerArgs {
+            tree_worker: TreeWorkerArgs {
                 metadata_json_download_worker: MetadataJsonDownloadWorkerArgs {
                     metadata_json_download_worker_count: 100,
                     metadata_json_download_worker_request_timeout: 200,
@@ -224,7 +225,9 @@ fn reload_tasks(state: &mut State, database_pool: Pool<Postgres>, env_config: En
                 },
                 program_transformer_worker: ProgramTransformerWorkerArgs {
                     program_transformer_channel_size: 100,
+                    program_transformer_worker_count: 100,
                 },
+                force: true,
             },
         };
 
@@ -250,7 +253,11 @@ fn reload_tasks(state: &mut State, database_pool: Pool<Postgres>, env_config: En
 
             println!("Backfill started for tree: {:}", address);
 
-            if let Err(e) = start_bubblegum_backfill(context.clone(), args).await {
+            // if let Err(e) = start_bubblegum_backfill(context.clone(), args).await {
+            //     eprintln!("Error backfilling tree {:?}: {:?}", address.clone(), e);
+            // }
+
+            if let Err(e) = start_backfill(context.clone(), args).await {
                 eprintln!("Error backfilling tree {:?}: {:?}", address.clone(), e);
             }
 

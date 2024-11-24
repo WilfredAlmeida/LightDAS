@@ -24,7 +24,7 @@ use {
         },
         json::ChainDataV1,
     },
-    sea_orm::{query::JsonValue, ConnectionTrait, TransactionTrait},
+    sea_orm::{ConnectionTrait, TransactionTrait},
     tracing::warn,
 };
 
@@ -33,7 +33,6 @@ pub async fn mint_v1<'c, T>(
     bundle: &InstructionBundle<'c>,
     txn: &'c T,
     instruction: &str,
-    cl_audits: bool,
 ) -> ProgramTransformerResult<Option<DownloadMetadataInfo>>
 where
     T: ConnectionTrait + TransactionTrait,
@@ -51,8 +50,7 @@ where
         &parsing_result.tree_update,
         &parsing_result.payload,
     ) {
-        let seq = save_changelog_event(cl, bundle.slot, bundle.txn_id, txn, instruction, cl_audits)
-            .await?;
+        let seq = save_changelog_event(cl, bundle.slot, bundle.txn_id, txn, instruction).await?;
         let metadata = args;
         #[allow(unreachable_patterns)]
         return match le.schema {
@@ -93,16 +91,14 @@ where
                 // automatically rolled back.
                 let multi_txn = txn.begin().await?;
 
-                upsert_asset_data(
+                let download_metadata_info = upsert_asset_data(
                     &multi_txn,
                     id_bytes.to_vec(),
                     chain_mutability,
                     chain_data_json,
                     uri.clone(),
                     Mutability::Mutable,
-                    JsonValue::String("processing".to_string()),
                     slot_i,
-                    Some(true),
                     name.to_vec(),
                     symbol.to_vec(),
                     seq as i64,
@@ -209,7 +205,7 @@ where
                     return Ok(None);
                 }
 
-                Ok(Some(DownloadMetadataInfo::new(id_bytes.to_vec(), uri)))
+                Ok(download_metadata_info)
             }
             _ => Err(ProgramTransformerError::NotImplemented),
         };
